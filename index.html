@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Animated Email Signature Studio</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <span class="dot"></span>
+  <h1>Animated Signature Studio</h1>
+  <span class="tag">outputs an email-ready animated .gif</span>
+</header>
+
+<main>
+  <!-- ================= CONTROLS ================= -->
+  <section class="card" id="controls">
+    <h2>Your details</h2>
+
+    <label>Full name</label>
+    <input id="f-name" type="text" maxlength="30">
+
+    <label>Job title</label>
+    <input id="f-title" type="text" maxlength="38">
+
+    <label>Company (line under title)</label>
+    <input id="f-company" type="text" maxlength="26">
+
+    <div class="row">
+      <div><label>Email</label><input id="f-email" type="email" maxlength="40"></div>
+      <div><label>Website</label><input id="f-website" type="text" maxlength="34"></div>
+    </div>
+
+    <label>Phone (optional)</label>
+    <input id="f-phone" type="text" placeholder="+1 555 010 2288" maxlength="24">
+
+    <label>Your photo</label>
+    <div class="file"><span class="btn" id="photo-label">Upload a headshot</span>
+      <input id="f-photo" type="file" accept="image/*"></div>
+    <div id="photoEditor" class="editor" style="display:none">
+      <canvas id="photoCrop"></canvas>
+      <div class="editrow"><input id="photoZoom" type="range" min="1" max="3" step="0.01" value="1"><button id="photoReset" class="mini">Reset</button></div>
+      <div class="ehint">Drag to reposition &middot; scroll or use the slider to zoom. What you see here is exactly what appears inside the sliced frame.</div>
+    </div>
+
+    <details open>
+      <summary>Company &amp; style settings <span class="badge">saved on this computer</span></summary>
+
+      <label>Company logo &mdash; PNG or <b>animated GIF</b></label>
+      <div class="file"><span class="btn" id="logo-label">Upload logo (GIF supported)</span>
+        <input id="f-logo" type="file" accept="image/png,image/gif,image/jpeg,image/svg+xml"></div>
+      <div id="logoEditor" class="editor" style="display:none">
+        <canvas id="logoCrop"></canvas>
+        <div class="editrow"><input id="logoZoom" type="range" min="0.3" max="3" step="0.01" value="1"><button id="logoReset" class="mini">Reset</button></div>
+        <div class="ehint">Upload your own <b>animated GIF</b> to prototype the logo motion &mdash; it plays inside the signature. Drag/zoom to position it in the box.</div>
+      </div>
+
+      <label>Accent color</label>
+      <div class="swatches" id="swatches"></div>
+
+      <label>Social icons on the bar</label>
+      <div class="checks" id="socialChecks"></div>
+
+      <label>Verified badge next to name</label>
+      <div class="seg" id="badgeSeg">
+        <button data-v="1" class="on">Show badge</button>
+        <button data-v="0">Hide</button>
+      </div>
+    </details>
+
+    <button class="ghost" id="replay">&#8635; Replay animation</button>
+  </section>
+
+  <!-- ================= PREVIEW / EXPORT ================= -->
+  <section class="card">
+    <h2>Live preview</h2>
+    <div class="preview-wrap">
+      <canvas id="stage" width="640" height="200"></canvas>
+    </div>
+
+    <div class="toolbar">
+      <button id="export-gif" class="go">&#11015; Download animated GIF</button>
+      <button id="export-png">&#11015; Download static PNG</button>
+    </div>
+
+    <div class="progress" id="progress"><i></i></div>
+    <div class="status" id="status">Fill in your details on the left — the preview animates automatically.</div>
+
+    <div class="hint">
+      <b>How to use it:</b> download the GIF, then in Gmail go to Settings &rarr; Signature &rarr; the image icon &rarr; upload the file;
+      in Outlook, Insert &rarr; Pictures into the signature box. The animation plays once when the email is opened.
+      Social icons are visual only — an image signature can't hold clickable links.
+    </div>
+
+    <a id="dl" class="dl"></a>
+  </section>
+</main>
+
+<!-- third-party libraries (globals: GIF, window.gifuct) load before the app modules -->
+<script src="vendor/gif.js"></script>
+<script src="vendor/gifuct.js"></script>
+<!-- app code (ES modules) -->
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
