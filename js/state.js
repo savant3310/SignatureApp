@@ -14,5 +14,8 @@ export const state = {
   avatarImg: null,
   photoAdjust: { zoom: 1, ox: 0, oy: 0 },
   logoImg: null,
+  linkedinIconImg: null,
+  instagramIconImg: null,
+  websiteIconImg: null,
   badge: true
 };
