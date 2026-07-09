@@ -72,20 +72,15 @@ function drawBar(p){
   ctx.save(); ctx.globalAlpha = pb; roundRectPath(ctx, L.barX, L.barY, L.barW, L.barH, 12); ctx.fillStyle = '#ff5e00'; ctx.fill(); ctx.restore();
 }
 
-/* ---- social icons stacked in the orange bar (LinkedIn, website, Instagram).
-   Purely visual here — the flat GIF/PNG can't carry per-icon links; real
-   clickable links come from the HTML export (see htmlSignature.js), which
-   overlays <a> tags at these same iconBar coordinates. ---- */
-function drawSocialIcons(p){
-  const pe = easeOut(seg(p, 0.10, 0.34)); if(pe <= 0) return;
-  const b = LAY.iconBar, imgs = [state.linkedinIconImg, state.websiteIconImg, state.instagramIconImg];
+/* ---- website icon, centered in the orange bar. Purely visual — the whole
+   exported image is meant to be hyperlinked to WEBSITE_URL using Gmail's/
+   Outlook's own "insert link" on the pasted image, no HTML/hosting needed. ---- */
+function drawSocialIcon(p){
+  const pe = easeOut(seg(p, 0.10, 0.34)); if(pe <= 0) return; const img = state.websiteIconImg; if(!img) return;
+  const b = LAY.iconBar, s = b.size;
   ctx.save(); ctx.globalAlpha = pe;
-  imgs.forEach((img, i) => {
-    if(!img) return;
-    const y = b.ys[i], s = b.size;
-    const pl = place(img.width, img.height, { w: s, h: s }, { zoom: 1, ox: 0, oy: 0 }, 'contain');
-    ctx.drawImage(img, b.cx - s/2 + pl.dx, y - s/2 + pl.dy, pl.dw, pl.dh);
-  });
+  const pl = place(img.width, img.height, { w: s, h: s }, { zoom: 1, ox: 0, oy: 0 }, 'contain');
+  ctx.drawImage(img, b.cx - s/2 + pl.dx, b.y - s/2 + pl.dy, pl.dw, pl.dh);
   ctx.restore();
 }
 
@@ -121,7 +116,7 @@ export function drawFrame(p, caretOn){
   ctx.clearRect(0, 0, W, H); ctx.fillStyle = CFG.BG; ctx.fillRect(0, 0, W, H);
   ctx.save(); roundRectPath(ctx, 4, 4, W-8, H-8, L.cardR); ctx.strokeStyle = '#e6e9f2'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
 
-  drawBar(p); drawSocialIcons(p); drawPhoto(p); drawLogo(p);
+  drawBar(p); drawSocialIcon(p); drawPhoto(p); drawLogo(p);
 
   const pName = seg(p, 0.28, 0.56);
   ctx.font = '700 22px -apple-system,Helvetica,Arial';

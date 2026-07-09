@@ -1,11 +1,10 @@
 /* main.js — wires the UI together: DOM refs, inputs, persistence, the crop
    editor, photo upload, export buttons, and the live-preview loop. */
-import { CFG, ACCENTS, LAY } from './config.js';
+import { CFG, ACCENTS, LAY, WEBSITE_URL } from './config.js';
 import { state } from './state.js';
 import { drawFrame } from './render.js';
 import { makeAdjuster } from './adjuster.js';
 import { makeExporter } from './exporter.js';
-import { makeHtmlSignatureExporter } from './htmlSignature.js';
 import { generateAvatar } from './avatar.js';
 
 const $ = id => document.getElementById(id);
@@ -17,8 +16,7 @@ const els = {
   swatches:$('swatches'), badgeSeg:$('badgeSeg'),
   replay:$('replay'), exportGif:$('export-gif'), exportPng:$('export-png'), dl:$('dl'),
   photoEditor:$('photoEditor'), photoCrop:$('photoCrop'), photoZoom:$('photoZoom'), photoReset:$('photoReset'),
-  passcode:$('f-passcode'), passcodeToggle:$('passcodeToggle'), avatarBlock:$('avatarBlock'), genAvatar:$('genAvatar'), avatarToggle:$('avatarToggle'), avatarStatus:$('avatarStatus'),
-  imgUrl:$('f-imgurl'), exportHtml:$('export-html')
+  passcode:$('f-passcode'), passcodeToggle:$('passcodeToggle'), avatarBlock:$('avatarBlock'), genAvatar:$('genAvatar'), avatarToggle:$('avatarToggle'), avatarStatus:$('avatarStatus')
 };
 
 /* ---- reflect initial state into the default-valued inputs ---- */
@@ -124,16 +122,14 @@ els.avatarToggle.addEventListener('click', () => {
 
 /* ---- export buttons ---- */
 makeExporter({ gifBtn: els.exportGif, pngBtn: els.exportPng, dl: els.dl, setStatus, showProgress, setBar, restart });
-makeHtmlSignatureExporter({ btn: els.exportHtml, urlInput: els.imgUrl, setStatus });
 
-/* ---- fixed logo + social icon images (assets/*.png) — not user-configurable;
+/* ---- fixed logo + website icon images (assets/*.png) — not user-configurable;
    the logo drops out to a text wordmark in render.js if its file isn't present ---- */
 (() => { const img = new Image(); img.onload = () => { state.logoImg = img; restart(); }; img.src = 'assets/logo.png'; })();
-(() => { const img = new Image(); img.onload = () => { state.linkedinIconImg = img; restart(); }; img.src = 'assets/icon-linkedin.png'; })();
 (() => { const img = new Image(); img.onload = () => { state.websiteIconImg = img; restart(); }; img.src = 'assets/icon-website.png'; })();
-(() => { const img = new Image(); img.onload = () => { state.instagramIconImg = img; restart(); }; img.src = 'assets/icon-instagram.png'; })();
 
 /* ---- boot ---- */
+$('site-url').textContent = WEBSITE_URL;
 loadCfg();
 loadPasscode();
 photoAdj.render();
