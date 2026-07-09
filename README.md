@@ -1,8 +1,8 @@
 # Animated Email Signature Studio
 
 A small, self-contained web app your employees open in a browser to build a
-personal **animated email signature**: a sliced-photo reveal, an animated (or
-static) company logo, and a typed-out name/title — exported as a single
+personal **animated email signature**: a sliced-photo reveal, the company
+wordmark, and a typed-out name/title — exported as a single
 **animated GIF** that plays inside real email clients (Gmail, Outlook, Apple Mail).
 
 Why a GIF? Email clients strip JavaScript and CSS animations, so an animated GIF
@@ -46,8 +46,41 @@ folder that contains `index.html`. No framework preset / build command needed
 (it's static).
 
 Each employee visits the link, fills in their details, and downloads their own
-signature. Their company-branding settings (logo, colors) are remembered per
+signature. Their company-branding settings (colors) are remembered per
 browser via `localStorage`.
+
+---
+
+## Animated avatar generator (uses OpenAI's API — needs setup)
+
+Employees can turn their uploaded headshot into an illustrated/animated-style
+avatar. This calls OpenAI's image API, which means an API key is involved —
+**that key must never end up in the browser.** The app never talks to OpenAI
+directly; it calls a small serverless function (`api/generate-avatar.js`)
+that holds the key server-side and proxies the request. The client only ever
+sends a shared team passcode + the employee's own photo; the stylization
+prompt is fixed in the server code so the endpoint can't be turned into a
+general-purpose image generator even by someone who has the passcode.
+
+**One-time setup (you, not each employee):**
+1. In the Vercel project → **Settings → Environment Variables**, add:
+   - `OPENAI_API_KEY` — your OpenAI key.
+   - `AVATAR_PASSCODE` — any short shared passcode you invent.
+   Redeploy after adding them (env var changes need a fresh deploy to take effect).
+2. **Set a spending limit on the OpenAI account itself** (platform.openai.com →
+   billing). The passcode and rate limit in `api/generate-avatar.js` reduce
+   abuse, but a hard cost cap on the account is the real backstop — code alone
+   can't guarantee a key never gets misused if it leaks some other way.
+3. Share the passcode with employees once (e.g. in the same message as the
+   app link). They paste it into **Company & style settings → Animated avatar
+   generator passcode** — it's remembered per browser via `localStorage`,
+   same as the accent setting.
+
+**Local development:** the plain `python -m http.server` start scripts can't
+run serverless functions, so "Generate animated avatar" will fail locally
+unless you run `vercel dev` instead (needs `npm i -g vercel`, then `vercel
+link` once, then a local `.env.local` copied from `.env.example` with real
+values). Everything else in the app works fine under the plain start scripts.
 
 ---
 
@@ -71,18 +104,16 @@ and share `http://<your-computer-ip>:8000`.
 
 ## Set your company branding (do this once)
 
-Expand **Company & style settings** and either:
+The logo is fixed and **not user-configurable** — there's no upload UI, so
+employees can't change it:
 
-1. **Upload your logo** — a transparent **PNG** *or an animated **GIF***, and/or
-2. Drop a file named **`logo.png`** into `assets/` — it loads automatically.
+- Drop a **`logo.png`** into `assets/` and it's drawn as the logo image in
+  every signature, or
+- Leave `assets/logo.png` absent and it falls back to a text wordmark —
+  **OPRAAH** — set in `js/config.js` → `COMPANY_NAME`.
 
-**Animated logo GIFs:** upload your own animated GIF to prototype the logo motion;
-the app decodes its frames and plays them inside the signature. A small editor
-appears — **drag to reposition** and **scroll / slide to zoom** to fit it in the
-box. Keep logo GIFs short (~1–2 s) to keep the final file small.
-
-Also set the **company name** (used as a text wordmark if there's no logo), the
-**accent color**, which **social icons** show, and the **verified badge**.
+Expand **Company & style settings** to set the **accent color** and the
+**verified badge** (these remain per-employee-browser settings).
 
 ---
 
@@ -108,22 +139,23 @@ signature-app/
 ├─ index.html          markup only (form + preview). No logic here.
 ├─ styles.css          all styling.
 ├─ js/
-│  ├─ config.js        ★ CFG (size/speed) + LAY (positions) + ACCENTS. Edit here first.
+│  ├─ config.js        ★ CFG (size/speed) + LAY (positions) + ACCENTS + COMPANY_NAME. Edit here first.
 │  ├─ state.js         the app's data + default field values.
 │  ├─ canvas.js        the shared preview <canvas> + 2D context.
 │  ├─ util.js          pure helpers: easing, place() crop math, roundRectPath…
-│  ├─ icons.js         social glyphs (LinkedIn / Instagram / YouTube / X).
 │  ├─ render.js        ★ all drawing. drawFrame() composes one frame.
-│  ├─ adjuster.js      the reusable drag/zoom crop editor.
-│  ├─ logo.js          decodes uploaded logos (incl. animated GIF frames).
+│  ├─ adjuster.js      the reusable drag/zoom crop editor (used for the headshot).
 │  ├─ exporter.js      GIF/PNG export (worker guard + watchdog + errors).
+│  ├─ avatar.js        client side of the animated-avatar generator (calls api/generate-avatar.js).
 │  └─ main.js          wiring: inputs, persistence, upload, preview loop, boot.
+├─ api/
+│  └─ generate-avatar.js  ★ Vercel serverless function — the ONLY place OPENAI_API_KEY is read.
 ├─ vendor/
 │  ├─ gif.js           GIF encoder    (global: GIF)
-│  ├─ gif.worker.js    encoder worker
-│  └─ gifuct.js        GIF decoder    (global: window.gifuct)
-├─ assets/logo.png     optional company logo (auto-loaded if present)
-├─ vercel.json         static hosting config
+│  └─ gif.worker.js    encoder worker
+├─ assets/logo.png     fixed logo image (optional — falls back to a text wordmark if absent)
+├─ vercel.json         static hosting config + api/ function settings
+├─ .env.example        env var names for local `vercel dev` (copy to .env.local, fill in, never commit)
 ├─ start-windows.bat / start-mac.command / start-linux.sh
 └─ README.md
 ```

@@ -14,7 +14,7 @@ main{display:grid;grid-template-columns:380px 1fr;gap:24px;padding:24px 28px;max
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
 .card h2{font-size:13px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0 0 16px}
 label{display:block;font-size:13px;color:var(--muted);margin:14px 0 6px}
-input[type=text],input[type=email]{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
+input[type=text],input[type=email],input[type=password]{width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);
   background:var(--panel2);color:var(--text);font-size:14px;outline:none;transition:border .15s}
 input:focus{border-color:var(--accent)}
 .row{display:flex;gap:10px}
@@ -39,6 +39,7 @@ button.ghost{width:100%;margin-top:14px;padding:11px;border:1px solid var(--line
 .editor canvas:active{cursor:grabbing}
 .editrow{display:flex;align-items:center;gap:10px;margin-top:9px}
 .editrow input[type=range]{flex:1;accent-color:var(--accent)}
+.editrow input[type=password],.editrow input[type=text]{flex:1;width:auto}
 .mini{padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--text);font-size:12px;cursor:pointer}
 .ehint{font-size:11px;color:var(--muted);margin-top:7px;line-height:1.5}
 .preview-wrap{background:#eef1f6;border-radius:12px;padding:22px;display:flex;justify-content:center;align-items:center;min-height:240px}

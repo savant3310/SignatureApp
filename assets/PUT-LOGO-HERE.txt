@@ -1,1 +1,5 @@
-put your company logo here as logo.png (PNG, transparent background). Optional.
+Drop a PNG here named logo.png (transparent background recommended) to have
+it drawn as the fixed logo image in every signature. There is no upload UI —
+this file is the only way to set it, so it can't be changed by employees.
+If this file isn't present, the app falls back to a text wordmark
+(js/config.js -> COMPANY_NAME).

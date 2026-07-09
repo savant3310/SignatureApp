@@ -28,7 +28,7 @@ export function loadImg(src){
 /* place(): compute the draw rectangle (relative to a box origin) for a source
    of size iw x ih inside a box, honoring an {zoom,ox,oy} adjustment.
    fit 'cover'   -> fills + crops (photo); offsets are clamped so it always covers.
-   fit 'contain' -> fits fully inside (logo); free positioning. */
+   fit 'contain' -> fits fully inside; free positioning. */
 export function place(iw, ih, box, adjust, fit){
   const base = fit === 'cover' ? Math.max(box.w/iw, box.h/ih) : Math.min(box.w/iw, box.h/ih);
   const s = base * (adjust.zoom || 1);

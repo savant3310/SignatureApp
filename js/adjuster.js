@@ -1,6 +1,7 @@
 /* adjuster.js — reusable drag + zoom crop editor.
    Edits an {zoom,ox,oy} object against a target box aspect, live.
-   Used for the headshot (fit 'cover') and the logo (fit 'contain'). */
+   Used for the headshot (fit 'cover'); also supports fit 'contain' for any
+   future image element positioned without cropping. */
 import { clamp, place } from './util.js';
 
 export function makeAdjuster(o){

@@ -21,16 +21,16 @@ export function makeExporter({ gifBtn, pngBtn, dl, setStatus, showProgress, setB
     let g, done = false, watchdog;
     try{
       gifBtn.disabled = true; showProgress(true); setStatus('Rendering frames…');
-      g = new window.GIF({ workers:2, quality:8, width:CFG.W, height:CFG.H, workerScript:'vendor/gif.worker.js', background:CFG.BG, repeat:-1 });
+      g = new window.GIF({ workers:2, quality:8, width:CFG.W, height:CFG.H, workerScript:'vendor/gif.worker.js', background:CFG.BG, repeat:CFG.LOOP_REPEATS });
 
       watchdog = setTimeout(() => { if(!done){ showProgress(false); gifBtn.disabled = false;
         setStatus('⚠ Encoding timed out — the GIF worker looks blocked. Make sure you\'re on the hosted/served link, not file://.'); } }, 30000);
 
       for(let f=0; f<CFG.INTRO_FRAMES; f++){
-        drawFrame(f/(CFG.INTRO_FRAMES-1), Math.floor(f/5)%2===0, f*CFG.FRAME_DELAY);
+        drawFrame(f/(CFG.INTRO_FRAMES-1), Math.floor(f/5)%2===0);
         g.addFrame(ctx, { copy:true, delay:CFG.FRAME_DELAY });
       }
-      drawFrame(1, false, CFG.INTRO_FRAMES*CFG.FRAME_DELAY);
+      drawFrame(1, false);
       g.addFrame(ctx, { copy:true, delay:CFG.HOLD_DELAY });
 
       g.on('progress', pr => { setBar(Math.round(pr*100)); setStatus('Encoding… ' + Math.round(pr*100) + '%'); });
@@ -38,7 +38,7 @@ export function makeExporter({ gifBtn, pngBtn, dl, setStatus, showProgress, setB
         done = true; clearTimeout(watchdog); showProgress(false); gifBtn.disabled = false;
         const name = slug(state.name) + '-signature.gif'; download(blob, name);
         const kb = (blob.size/1024).toFixed(0);
-        const warn = blob.size > 1024*1024 ? ' <b style="color:#f5a623">(over 1 MB — try a smaller photo or shorter logo GIF)</b>' : '';
+        const warn = blob.size > 1024*1024 ? ' <b style="color:#f5a623">(over 1 MB — try a smaller photo)</b>' : '';
         setStatus('Saved <b>' + name + '</b> — ' + kb + ' KB.' + warn + ' Add it to your email signature as an image.');
         restart();
       });
