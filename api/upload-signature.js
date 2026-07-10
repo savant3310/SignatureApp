@@ -51,7 +51,8 @@ module.exports = async function handler(req, res) {
 
     const blob = await put(`signatures/${slug(name)}.${ext}`, buf, {
       access: 'public',
-      contentType: `image/${ext}`
+      contentType: `image/${ext}`,
+      addRandomSuffix: true // every generation (or two people with similar names) needs its own URL, not an overwrite collision
     });
 
     res.status(200).json({ url: blob.url });
