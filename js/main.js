@@ -1,10 +1,10 @@
 /* main.js — wires the UI together: DOM refs, inputs, persistence, the crop
    editor, photo upload, export buttons, and the live-preview loop. */
-import { CFG, ACCENTS, LAY, WEBSITE_URL } from './config.js';
+import { CFG, ACCENTS, LAY } from './config.js';
 import { state } from './state.js';
 import { drawFrame } from './render.js';
 import { makeAdjuster } from './adjuster.js';
-import { makeExporter } from './exporter.js';
+import { makePublisher } from './publish.js';
 import { generateAvatar } from './avatar.js';
 
 const $ = id => document.getElementById(id);
@@ -14,7 +14,7 @@ const els = {
   photoLabel:$('photo-label'),
   status:$('status'), progress:$('progress'), progressBar:document.querySelector('#progress i'),
   swatches:$('swatches'), badgeSeg:$('badgeSeg'),
-  replay:$('replay'), exportGif:$('export-gif'), exportPng:$('export-png'), dl:$('dl'),
+  replay:$('replay'), publish:$('publish-btn'),
   photoEditor:$('photoEditor'), photoCrop:$('photoCrop'), photoZoom:$('photoZoom'), photoReset:$('photoReset'),
   passcode:$('f-passcode'), passcodeToggle:$('passcodeToggle'), avatarBlock:$('avatarBlock'), genAvatar:$('genAvatar'), avatarToggle:$('avatarToggle'), avatarStatus:$('avatarStatus')
 };
@@ -120,20 +120,21 @@ els.avatarToggle.addEventListener('click', () => {
   setAvatarStatus(showingAvatar ? 'Showing your original photo.' : 'Showing the generated avatar.');
 });
 
-/* ---- export buttons ---- */
-makeExporter({ gifBtn: els.exportGif, pngBtn: els.exportPng, dl: els.dl, setStatus, showProgress, setBar, restart });
+/* ---- publish (render → upload → copy clickable HTML) ---- */
+makePublisher({ btn: els.publish, setStatus, showProgress, setBar, restart });
 
-/* ---- fixed logo + website icon images (assets/*.png) — not user-configurable;
+/* ---- fixed logo + social icon images (assets/*.png) — not user-configurable;
    the logo drops out to a text wordmark in render.js if its file isn't present ---- */
 (() => { const img = new Image(); img.onload = () => { state.logoImg = img; restart(); }; img.src = 'assets/logo.png'; })();
+(() => { const img = new Image(); img.onload = () => { state.linkedinIconImg = img; restart(); }; img.src = 'assets/icon-linkedin.png'; })();
 (() => { const img = new Image(); img.onload = () => { state.websiteIconImg = img; restart(); }; img.src = 'assets/icon-website.png'; })();
+(() => { const img = new Image(); img.onload = () => { state.instagramIconImg = img; restart(); }; img.src = 'assets/icon-instagram.png'; })();
 
 /* ---- boot ---- */
-$('site-url').textContent = WEBSITE_URL;
 loadCfg();
 loadPasscode();
 photoAdj.render();
 if(location.protocol === 'file:'){
-  setStatus('⚠ You\'re viewing this as a local file. It previews fine, but <b>GIF export needs the hosted link</b> (or the start script). See the note below.');
+  setStatus('⚠ You\'re viewing this as a local file. It previews fine, but <b>publishing needs the hosted link</b> (or the start script). See the note below.');
 }
 requestAnimationFrame(tick);
