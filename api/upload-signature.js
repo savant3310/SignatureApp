@@ -5,8 +5,10 @@
  * user having to host the image anywhere themselves.
  *
  * Needs a Blob store connected to this Vercel project (Storage tab in the
- * dashboard) — that's what provisions BLOB_READ_WRITE_TOKEN below; nothing
- * else to configure.
+ * dashboard); nothing else to configure. Connecting the store provisions
+ * BLOB_STORE_ID, and `put()` below authenticates with it automatically via
+ * Vercel's OIDC token (present at runtime once connected) — falling back to
+ * a classic BLOB_READ_WRITE_TOKEN if that's what's set instead.
  */
 const { put } = require('@vercel/blob');
 
@@ -29,9 +31,8 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method !== 'POST') { res.status(405).json({ error: 'Method not allowed' }); return; }
 
-    const token = process.env.BLOB_READ_WRITE_TOKEN;
-    if (!token) {
-      res.status(500).json({ error: 'Server not configured — connect a Blob store to this project in Vercel’s Storage tab (provisions BLOB_READ_WRITE_TOKEN).' });
+    if (!process.env.BLOB_STORE_ID && !process.env.BLOB_READ_WRITE_TOKEN) {
+      res.status(500).json({ error: 'Server not configured — connect a Blob store to this project in Vercel’s Storage tab.' });
       return;
     }
 
@@ -50,8 +51,7 @@ module.exports = async function handler(req, res) {
 
     const blob = await put(`signatures/${slug(name)}.${ext}`, buf, {
       access: 'public',
-      contentType: `image/${ext}`,
-      token
+      contentType: `image/${ext}`
     });
 
     res.status(200).json({ url: blob.url });
