@@ -26,6 +26,24 @@ export function fadeSlide(text, x, y, font, color, prog){
   ctx.globalAlpha = e; ctx.translate((1-e)*10, 0); ctx.fillStyle = color; ctx.fillText(text, x, y); ctx.restore();
 }
 
+/* Truncates text with an ellipsis so it fits maxWidth at the given font —
+   for narrower templates where user-entered text (linkedin/website URLs)
+   could otherwise overflow a fixed-width column. */
+export function fitText(text, font, maxWidth){
+  ctx.save(); ctx.font = font;
+  let out = text;
+  if(ctx.measureText(text).width > maxWidth){
+    let lo = 0, hi = text.length;
+    while(lo < hi){
+      const mid = (lo+hi+1) >> 1;
+      if(ctx.measureText(text.slice(0, mid)+'…').width <= maxWidth) lo = mid; else hi = mid-1;
+    }
+    out = text.slice(0, lo) + '…';
+  }
+  ctx.restore();
+  return out;
+}
+
 export function drawBadge(x, y, prog, accent){
   if(prog <= 0) return; const s = easeOutBack(clamp01(prog)), r = 7.5;
   ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
