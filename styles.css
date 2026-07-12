@@ -28,8 +28,8 @@ input:focus{border-color:var(--accent)}
 .swatch.sel{border-color:#fff}
 .checks{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px}
 .checks label{display:flex;align-items:center;gap:6px;margin:0;color:var(--text);font-size:13px;cursor:pointer}
-.seg{display:flex;gap:8px;margin-top:6px}
-.seg button{flex:1;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--muted);font-size:12px;cursor:pointer}
+.seg{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}
+.seg button{flex:1;min-width:90px;padding:9px;border:1px solid var(--line);border-radius:9px;background:var(--panel2);color:var(--muted);font-size:12px;cursor:pointer}
 .seg button.on{border-color:var(--accent);color:#fff;background:#26305a}
 button.ghost{width:100%;margin-top:14px;padding:11px;border:1px solid var(--line);border-radius:11px;cursor:pointer;
   font-size:13px;background:transparent;color:var(--text)}

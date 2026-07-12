@@ -39,5 +39,12 @@ export function makeAdjuster(o){
   o.slider.addEventListener('change', () => { o.onCommit && o.onCommit(); });
   o.reset.addEventListener('click', () => { o.adjust.zoom = 1; o.adjust.ox = 0; o.adjust.oy = 0; o.slider.value = 1; render(); o.onChange && o.onChange(); o.onCommit && o.onCommit(); });
 
-  return { render, syncSlider: () => { o.slider.value = o.adjust.zoom || 1; } };
+  return {
+    render,
+    syncSlider: () => { o.slider.value = o.adjust.zoom || 1; },
+    /* Call after mutating o.box in place (e.g. switching to a template with
+       a differently-shaped photo box) — resizes the editor canvas to match
+       the new aspect ratio, since that's only computed once at creation. */
+    setBox: box => { o.box.w = box.w; o.box.h = box.h; c.height = Math.round(o.cw * o.box.h / o.box.w); render(); }
+  };
 }

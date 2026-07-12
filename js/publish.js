@@ -11,38 +11,39 @@
  * same "sliced image" technique used for clickable regions in HTML email
  * since before CSS positioning was safe to rely on there. Tables and plain
  * <a><img> survive paste sanitizers; position/left/top do not.
+ *
+ * The slice geometry comes from the active template's `linkTable` (see
+ * link-table.js + js/templates/*.js) so this works the same for every
+ * template regardless of which edge its icon strip sits on.
  */
-import { CFG, LAY, LINK_TABLE, SOCIAL_LINKS } from './config.js';
+import { CFG, SOCIAL_LINKS } from './config.js';
 import { canvas, ctx } from './canvas.js';
 import { state } from './state.js';
-import { drawFrame } from './render.js';
+import { drawFrame, activeTemplate } from './render.js';
+import { sliceRects } from './link-table.js';
 
 const slug = s => (s || 'signature').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'signature';
 
-/* top-to-bottom order of both the drawn icons (render.js drawSocialIcons)
-   and the table rows below */
-const ROWS = [
+/* order the 3 icon slices are drawn in (see draw-utils.js drawSocialIcons) —
+   must match cellSizes order in every template's linkTable */
+const LINK_ORDER = [
   { key: 'linkedin', href: SOCIAL_LINKS.linkedin },
   { key: 'website', href: SOCIAL_LINKS.website },
   { key: 'instagram', href: SOCIAL_LINKS.instagram }
 ];
 
-function rowY(i){ return LINK_TABLE.rowH.slice(0, i).reduce((a, b) => a + b, 0); }
-
 /* Renders the intro animation once, splitting each frame into the 4 slice
-   canvases and feeding each to its own gif.js encoder in lockstep so all 4
-   GIFs stay frame-synced. Returns { main, linkedin, website, instagram }
-   Blobs. */
+   canvases (per the active template's linkTable geometry) and feeding each
+   to its own gif.js encoder in lockstep so all 4 GIFs stay frame-synced.
+   Returns { main, linkedin, website, instagram } Blobs. */
 function renderSlicedGifs(onProgress){
   return new Promise((resolve, reject) => {
     if(typeof window.GIF !== 'function'){ reject(new Error('Encoder not loaded (vendor/gif.js missing).')); return; }
 
-    const colW = LINK_TABLE.colW, mainW = CFG.W - colW;
+    const { icon: iconRects, main: mainRect } = sliceRects(activeTemplate().linkTable);
     const slices = [
-      { key: 'linkedin', x: 0, y: rowY(0), w: colW, h: LINK_TABLE.rowH[0], workers: 1 },
-      { key: 'website', x: 0, y: rowY(1), w: colW, h: LINK_TABLE.rowH[1], workers: 1 },
-      { key: 'instagram', x: 0, y: rowY(2), w: colW, h: LINK_TABLE.rowH[2], workers: 1 },
-      { key: 'main', x: colW, y: 0, w: mainW, h: CFG.H, workers: 2 }
+      ...LINK_ORDER.map((link, i) => ({ key: link.key, ...iconRects[i], workers: 1 })),
+      { key: 'main', ...mainRect, workers: 2 }
     ];
 
     let watchdog;
@@ -95,22 +96,42 @@ function blobToDataUrl(blob){
 }
 
 /* Plain-table reassembly, zero spacing/border, MSO-safe resets — no CSS
-   position anywhere so it survives Gmail's/Outlook's paste sanitizer. */
-function buildHtml(urls){
-  const rowsHtml = ROWS.map((row, i) => {
-    const h = LINK_TABLE.rowH[i];
-    const cell = `<td width="${LINK_TABLE.colW}" height="${h}" style="width:${LINK_TABLE.colW}px;height:${h}px;padding:0;margin:0;font-size:0;line-height:0;mso-line-height-rule:exactly;">` +
-      `<a href="${row.href}" target="_blank" rel="noopener" style="text-decoration:none;">` +
-      `<img src="${urls[row.key]}" width="${LINK_TABLE.colW}" height="${h}" alt="" style="display:block;border:0;outline:none;width:${LINK_TABLE.colW}px;height:${h}px;">` +
+   position anywhere so it survives Gmail's/Outlook's paste sanitizer.
+   Handles both linkTable orientations: 'column' (icon strip on the left or
+   right, main cell rowspans across it) and 'row' (icon strip along the top
+   or bottom, main cell colspans across it). */
+function buildHtml(urls, linkTable){
+  const { orientation, stripAt } = linkTable;
+  const { icon: iconRects } = sliceRects(linkTable);
+
+  const cellStyle = (w, h) => `width:${w}px;height:${h}px;padding:0;margin:0;font-size:0;line-height:0;mso-line-height-rule:exactly;`;
+  const iconTds = LINK_ORDER.map((link, i) => {
+    const r = iconRects[i];
+    return `<td width="${r.w}" height="${r.h}" style="${cellStyle(r.w, r.h)}">` +
+      `<a href="${link.href}" target="_blank" rel="noopener" style="text-decoration:none;">` +
+      `<img src="${urls[link.key]}" width="${r.w}" height="${r.h}" alt="" style="display:block;border:0;outline:none;width:${r.w}px;height:${r.h}px;">` +
       `</a></td>`;
-    const mainCell = i === 0
-      ? `<td width="${CFG.W - LINK_TABLE.colW}" height="${CFG.H}" rowspan="${ROWS.length}" style="width:${CFG.W - LINK_TABLE.colW}px;height:${CFG.H}px;padding:0;margin:0;font-size:0;line-height:0;mso-line-height-rule:exactly;">` +
-        `<a href="${SOCIAL_LINKS.website}" target="_blank" rel="noopener" style="text-decoration:none;">` +
-        `<img src="${urls.main}" width="${CFG.W - LINK_TABLE.colW}" height="${CFG.H}" alt="${state.name} signature" style="display:block;border:0;outline:none;width:${CFG.W - LINK_TABLE.colW}px;height:${CFG.H}px;">` +
-        `</a></td>`
-      : '';
-    return `<tr>${cell}${mainCell}</tr>`;
-  }).join('\n');
+  });
+
+  const { main: mainRect } = sliceRects(linkTable);
+  const mainSpanAttr = orientation === 'column' ? `rowspan="${LINK_ORDER.length}"` : `colspan="${LINK_ORDER.length}"`;
+  const mainTd = `<td width="${mainRect.w}" height="${mainRect.h}" ${mainSpanAttr} style="${cellStyle(mainRect.w, mainRect.h)}">` +
+    `<a href="${SOCIAL_LINKS.website}" target="_blank" rel="noopener" style="text-decoration:none;">` +
+    `<img src="${urls.main}" width="${mainRect.w}" height="${mainRect.h}" alt="${state.name} signature" style="display:block;border:0;outline:none;width:${mainRect.w}px;height:${mainRect.h}px;">` +
+    `</a></td>`;
+
+  let rowsHtml;
+  if(orientation === 'column'){
+    rowsHtml = iconTds.map((cell, i) => {
+      if(i !== 0) return `<tr>${cell}</tr>`;
+      return stripAt === 'start' ? `<tr>${cell}${mainTd}</tr>` : `<tr>${mainTd}${cell}</tr>`;
+    }).join('\n');
+  } else {
+    const iconRow = `<tr>${iconTds.join('')}</tr>`;
+    const mainRow = `<tr>${mainTd}</tr>`;
+    rowsHtml = stripAt === 'start' ? `${iconRow}\n${mainRow}` : `${mainRow}\n${iconRow}`;
+  }
+
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">\n${rowsHtml}\n</table>`;
 }
 
@@ -154,7 +175,7 @@ export function makePublisher({ btn, setStatus, showProgress, setBar, restart })
       if(!r.ok) throw new Error(json.error || ('Upload failed (' + r.status + ')'));
       setBar(90);
 
-      const html = buildHtml(json.urls);
+      const html = buildHtml(json.urls, activeTemplate().linkTable);
       await copyRich(html);
       setBar(100);
       setStatus('Copied! Paste directly into your Gmail/Outlook signature editor — the signature links to the website, and LinkedIn/website/Instagram in the bar are real clickable links too.');

@@ -36,28 +36,6 @@ export const SOCIAL_LINKS = {
   website: 'https://opraah.in/'
 };
 
-/* Layout of every element on the canvas. Edit freely. */
-export const LAY = {
-  cardR: 12,
-  barX: 4, barY: 4, barW: 40, barH: CFG.H - 8,        // orange bar (left, flush to card edge)
-  contentX: 78,                                       // where text starts
-  logoBox: { x: 78, y: 16, w: 150, h: 38 },           // logo box (top-left)
-  nameY: 82, titleY: 104, companyY: 124, linkedinY: 144, websiteY: 160, phoneY: 176,
-  px: 410, py: 24, pw: 640 - 16 - 410, ph: 200 - 48,  // sliced photo region (right)
-  slices: 5, skew: 26,                                // diagonal cut
-  // social icons stacked in the orange bar, centered horizontally on it (barX + barW/2)
-  iconBar: { cx: 4 + 40/2, ys: [66, 100, 134], size: 20 }
-};
-
-/* Table-slice geometry for the published HTML signature (see publish.js).
-   Gmail/Outlook strip position:absolute on paste, so per-icon links can't be
-   CSS overlays — instead the rendered frame is cut into rectangles and
-   reassembled as an HTML <table>, exactly like the classic "sliced image"
-   email technique: the 3 icon strips (left column) become their own <a><img>
-   cells, the rest of the signature (right column) is one plain image.
-   Row boundaries sit at the midpoints between the 3 icon centers in
-   LAY.iconBar.ys, so each strip is centered on its icon. Must sum to CFG.H. */
-export const LINK_TABLE = {
-  colW: 44,             // left (icon) column width — matches barX + barW
-  rowH: [83, 34, 83]     // LinkedIn / website / Instagram strip heights, top to bottom
-};
+/* Per-template layout (positions) and linkTable (icon-strip/slice geometry)
+   now live in js/templates/*.js — see js/templates/index.js for the
+   registry. This file only holds config shared across every template. */

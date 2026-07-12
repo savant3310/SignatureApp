@@ -1,8 +1,9 @@
 /* main.js — wires the UI together: DOM refs, inputs, persistence, the crop
    editor, photo upload, export buttons, and the live-preview loop. */
-import { CFG, ACCENTS, LAY } from './config.js';
+import { CFG, ACCENTS } from './config.js';
 import { state } from './state.js';
-import { drawFrame } from './render.js';
+import { drawFrame, activeTemplate } from './render.js';
+import { TEMPLATE_LIST } from './templates/index.js';
 import { makeAdjuster } from './adjuster.js';
 import { makePublisher } from './publish.js';
 import { generateAvatar } from './avatar.js';
@@ -11,7 +12,7 @@ const $ = id => document.getElementById(id);
 const els = {
   name:$('f-name'), title:$('f-title'), company:$('f-company'), linkedin:$('f-linkedin'),
   website:$('f-website'), phone:$('f-phone'), photo:$('f-photo'),
-  photoLabel:$('photo-label'),
+  photoLabel:$('photo-label'), templateSeg:$('templateSeg'),
   status:$('status'), progress:$('progress'), progressBar:document.querySelector('#progress i'),
   swatches:$('swatches'), badgeSeg:$('badgeSeg'),
   replay:$('replay'), publish:$('publish-btn'),
@@ -54,12 +55,16 @@ function restart(){ animStart = performance.now(); }
 
 /* ---- persistence (company + style, saved in this browser) ---- */
 function saveCfg(){ try{ localStorage.setItem('sig.cfg', JSON.stringify({
-  company: state.company, accent: state.accent, badge: state.badge })); }catch(e){} }
+  company: state.company, accent: state.accent, badge: state.badge, template: state.template })); }catch(e){} }
 function loadCfg(){ try{
   const d = JSON.parse(localStorage.getItem('sig.cfg') || 'null'); if(!d) return;
   if(d.company){ state.company = d.company; els.company.value = d.company; }
   if(d.accent) state.accent = d.accent;
   if(typeof d.badge === 'boolean') state.badge = d.badge;
+  if(d.template && TEMPLATE_LIST.some(t => t.id === d.template)){
+    state.template = d.template; photoAdj.setBox(activeTemplate().photoBox);
+    [...els.templateSeg.children].forEach(x => x.classList.toggle('on', x.dataset.id === d.template));
+  }
 }catch(e){} }
 
 /* ---- accent swatches ---- */
@@ -72,9 +77,16 @@ ACCENTS.forEach(c => { const s = document.createElement('div'); s.className = 's
 [...els.badgeSeg.children].forEach(b => b.onclick = () => { state.badge = b.dataset.v === '1';
   [...els.badgeSeg.children].forEach(x => x.classList.remove('on')); b.classList.add('on'); saveCfg(); restart(); });
 
+/* ---- template picker ---- */
+TEMPLATE_LIST.forEach(t => { const b = document.createElement('button'); b.textContent = t.name; b.dataset.id = t.id;
+  if(t.id === state.template) b.classList.add('on');
+  b.onclick = () => { state.template = t.id; photoAdj.setBox(activeTemplate().photoBox); saveCfg();
+    [...els.templateSeg.children].forEach(x => x.classList.remove('on')); b.classList.add('on'); restart(); };
+  els.templateSeg.appendChild(b); });
+
 /* ---- crop editor ---- */
 const photoAdj = makeAdjuster({ canvas: els.photoCrop, slider: els.photoZoom, reset: els.photoReset, cw: 300,
-  box: { w: LAY.pw, h: LAY.ph }, fit: 'cover', getSource: () => state.photoImg, adjust: state.photoAdjust, onCommit: saveCfg });
+  box: { ...activeTemplate().photoBox }, fit: 'cover', getSource: () => state.photoImg, adjust: state.photoAdjust, onCommit: saveCfg });
 
 /* ---- text inputs ---- */
 function bind(el, key, after){ el.addEventListener('input', () => { state[key] = el.value; if(after) after(); restart(); }); }
