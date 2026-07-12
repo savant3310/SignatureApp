@@ -3,7 +3,7 @@
    preview and the GIF export call drawFrame. */
 import { ctx } from './canvas.js';
 import { state } from './state.js';
-import { CFG, LAY, COMPANY_NAME } from './config.js';
+import { CFG, LAY, COMPANY_NAME, BRAND } from './config.js';
 import { clamp01, easeOut, easeOutBack, seg, roundRectPath, initials, place } from './util.js';
 
 /* ---- typewriter + fade/slide text ---- */
@@ -42,7 +42,7 @@ function drawPhoto(p){
     if(state.photoImg){ ctx.drawImage(state.photoImg, L.px+pl.dx+sl, L.py+pl.dy, pl.dw, pl.dh); }
     else{
       const g = ctx.createLinearGradient(L.px, L.py, L.px+L.pw, L.py+L.ph);
-      g.addColorStop(0, state.accent); g.addColorStop(1, '#20263f');
+      g.addColorStop(0, state.accent); g.addColorStop(1, BRAND.black);
       ctx.fillStyle = g; ctx.fillRect(L.px-SK+sl, L.py, L.pw+2*SK, L.ph);
     }
     ctx.restore();
@@ -69,7 +69,7 @@ function drawPhoto(p){
 /* ---- accent bar (left) ---- */
 function drawBar(p){
   const L = LAY; const pb = easeOut(seg(p, 0.06, 0.3)); if(pb <= 0) return;
-  ctx.save(); ctx.globalAlpha = pb; roundRectPath(ctx, L.barX, L.barY, L.barW, L.barH, 12); ctx.fillStyle = '#ff5e00'; ctx.fill(); ctx.restore();
+  ctx.save(); ctx.globalAlpha = pb; roundRectPath(ctx, L.barX, L.barY, L.barW, L.barH, 12); ctx.fillStyle = BRAND.orange; ctx.fill(); ctx.restore();
 }
 
 /* ---- social icons stacked in the orange bar (LinkedIn, website, Instagram).
@@ -110,7 +110,7 @@ function drawLogo(p){
   } else {
     ctx.font = '800 17px -apple-system,Helvetica,Arial'; ctx.textAlign='left'; ctx.textBaseline='alphabetic';
     const sq = 13, by = box.y + box.h - 9; roundRectPath(ctx, box.x, by-13, sq, sq, 3); ctx.fillStyle = accent; ctx.fill();
-    ctx.fillStyle = '#141a2b'; ctx.fillText(COMPANY_NAME, box.x+sq+7, by);
+    ctx.fillStyle = BRAND.black; ctx.fillText(COMPANY_NAME, box.x+sq+7, by);
   }
   ctx.restore();
 }
@@ -126,12 +126,12 @@ export function drawFrame(p, caretOn){
   const pName = seg(p, 0.28, 0.56);
   ctx.font = '700 22px -apple-system,Helvetica,Arial';
   const nameW = ctx.measureText(state.name.slice(0, Math.round(clamp01(pName)*state.name.length))).width;
-  drawType(state.name, L.contentX, L.nameY, '700 22px -apple-system,Helvetica,Arial', '#ff5e00', pName, caretOn, accent);
+  drawType(state.name, L.contentX, L.nameY, '700 22px -apple-system,Helvetica,Arial', BRAND.orange, pName, caretOn, accent);
   if(state.badge){ const bp = seg(p, 0.56, 0.66); drawBadge(L.contentX+nameW+13, L.nameY-7, bp, accent); }
 
-  fadeSlide(state.title,   L.contentX, L.titleY,   '600 14px -apple-system,Helvetica,Arial', accent,    seg(p, 0.50, 0.66));
-  fadeSlide(state.company, L.contentX, L.companyY, '700 13px -apple-system,Helvetica,Arial', '#ff5e00', seg(p, 0.58, 0.74));
+  fadeSlide(state.title,   L.contentX, L.titleY,   '600 14px -apple-system,Helvetica,Arial', accent,       seg(p, 0.50, 0.66));
+  fadeSlide(state.company, L.contentX, L.companyY, '700 13px -apple-system,Helvetica,Arial', BRAND.orange, seg(p, 0.58, 0.74));
   const lines = []; if(state.linkedin) lines.push(state.linkedin); if(state.website) lines.push(state.website); if(state.phone) lines.push(state.phone);
   const ys = [L.linkedinY, L.websiteY, L.phoneY];
-  lines.slice(0,3).forEach((tx, i) => fadeSlide(tx, L.contentX, ys[i], '400 12.5px -apple-system,Helvetica,Arial', '#5b6478', seg(p, 0.66 + i*0.06, 0.82 + i*0.06)));
+  lines.slice(0,3).forEach((tx, i) => fadeSlide(tx, L.contentX, ys[i], '400 12.5px -apple-system,Helvetica,Arial', BRAND.black, seg(p, 0.66 + i*0.06, 0.82 + i*0.06)));
 }

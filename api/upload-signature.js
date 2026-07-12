@@ -10,8 +10,16 @@
  * BLOB_STORE_ID, and `put()` below authenticates with it automatically via
  * Vercel's OIDC token (present at runtime once connected) — falling back to
  * a classic BLOB_READ_WRITE_TOKEN if that's what's set instead.
+ *
+ * Also logs a usage row (name, ip, user-agent, timestamp) to Postgres for
+ * every successful generation — piggybacked on this call rather than a
+ * separate request, so tracking usage costs no extra round-trip. Logging
+ * failures never fail the actual upload; the signature is the point, the
+ * log is just observability. Query it directly in Neon's SQL editor:
+ * `SELECT * FROM generations ORDER BY created_at DESC;`
  */
 const { put } = require('@vercel/blob');
+const { neon } = require('@neondatabase/serverless');
 
 const SLICE_KEYS = ['main', 'linkedin', 'website', 'instagram'];
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;      // raw bytes per slice
@@ -72,6 +80,13 @@ module.exports = async function handler(req, res) {
       });
       return [key, blob.url];
     }));
+
+    if (process.env.DATABASE_URL) {
+      try {
+        const sql = neon(process.env.DATABASE_URL);
+        await sql`INSERT INTO generations (name, ip, user_agent) VALUES (${name || null}, ${ip}, ${req.headers['user-agent'] || null})`;
+      } catch (logErr) { console.error('generations log failed:', logErr); } // best-effort — never blocks the response
+    }
 
     res.status(200).json({ urls: Object.fromEntries(uploads) });
   } catch (err) {

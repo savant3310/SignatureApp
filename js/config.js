@@ -10,7 +10,20 @@ export const CFG = {
   LOOP_REPEATS: 2    // GIF replays this many extra times after the first play (2 = 3 total plays, 3 = 4 total)
 };
 
-export const ACCENTS = ['#5b7cfa','#ff5a3c','#38d39f','#f5a623','#a066ff','#00b5d8','#111827'];
+/* Official Opraah brand palette — the only colors any template/design in
+   this app should draw from (bars, text, backgrounds, decorative shapes). */
+export const BRAND = {
+  orange: '#FF5E00',
+  cream: '#FFEEE7',
+  blue: '#000AD5',
+  lavender: '#EDB5FF',
+  black: '#0A0A0A'
+};
+
+/* Accent swatches offered in the UI. Cream is excluded here — as foreground
+   text/caret color against the white card it has no contrast — but it's
+   still available via BRAND.cream for background/decorative use. */
+export const ACCENTS = [BRAND.orange, BRAND.blue, BRAND.black, BRAND.lavender];
 
 export const COMPANY_NAME = 'OPRAAH';
 

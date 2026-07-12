@@ -2,6 +2,7 @@
   "name": "signature-app",
   "private": true,
   "dependencies": {
-    "@vercel/blob": "^2.6.1"
+    "@vercel/blob": "^2.6.1",
+    "@neondatabase/serverless": "^1.1.0"
   }
 }
