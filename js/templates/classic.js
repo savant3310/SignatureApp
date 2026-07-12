@@ -80,7 +80,8 @@ function drawLogo(p){
 }
 
 function drawFrame(p, caretOn){
-  const L = LAY, accent = state.accent;
+  const { W, H } = CFG, L = LAY, accent = state.accent;
+  ctx.save(); roundRectPath(ctx, 4, 4, W-8, H-8, L.cardR); ctx.strokeStyle = '#e6e9f2'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
 
   drawBar(p); drawSocialIcons(p, LINK_TABLE); drawPhoto(p); drawLogo(p);
 
