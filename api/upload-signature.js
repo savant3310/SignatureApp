@@ -1,8 +1,9 @@
-/* api/upload-signature.js — Vercel serverless function. Uploads the
- * client-rendered signature GIF to Vercel Blob and hands back its public
- * URL, so the app can publish a ready-to-paste HTML signature (with the
- * LinkedIn/website/Instagram icons independently clickable) without the
- * user having to host the image anywhere themselves.
+/* api/upload-signature.js — Vercel serverless function. Uploads the 4
+ * client-rendered signature GIF slices (see publish.js — the frame is cut
+ * into pieces so the icons can be individually hyperlinked in a plain HTML
+ * table, since Gmail/Outlook strip position:absolute on paste) to Vercel
+ * Blob and hands back their public URLs, so the app can publish a
+ * ready-to-paste signature without the user hosting anything themselves.
  *
  * Needs a Blob store connected to this Vercel project (Storage tab in the
  * dashboard); nothing else to configure. Connecting the store provisions
@@ -12,7 +13,9 @@
  */
 const { put } = require('@vercel/blob');
 
-const MAX_IMAGE_BYTES = 6 * 1024 * 1024; // raw bytes; keeps the base64 payload under Vercel's request-body limit
+const SLICE_KEYS = ['main', 'linkedin', 'website', 'instagram'];
+const MAX_IMAGE_BYTES = 3 * 1024 * 1024;      // raw bytes per slice
+const MAX_TOTAL_BYTES = 4 * 1024 * 1024;      // raw bytes across all 4 — stays under Vercel's request-body ceiling once base64-encoded
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 10;
 
@@ -41,21 +44,36 @@ module.exports = async function handler(req, res) {
 
     let body;
     try { body = req.body; } catch (e) { body = null; } // platform body parsing throws on malformed JSON
-    const { imageDataUrl, name } = body || {};
-    const match = typeof imageDataUrl === 'string' && imageDataUrl.match(/^data:image\/(gif|png);base64,(.+)$/);
-    if (!match) { res.status(400).json({ error: 'Missing or invalid image' }); return; }
+    const { slices, name } = body || {};
+    if (!slices || typeof slices !== 'object' || SLICE_KEYS.some(k => !slices[k])) {
+      res.status(400).json({ error: 'Missing or invalid image slices' }); return;
+    }
 
-    const [, ext, b64] = match;
-    const buf = Buffer.from(b64, 'base64');
-    if (buf.length > MAX_IMAGE_BYTES) { res.status(413).json({ error: 'Signature too large — try a smaller photo' }); return; }
+    const buffers = {};
+    let total = 0;
+    for (const key of SLICE_KEYS) {
+      const match = typeof slices[key] === 'string' && slices[key].match(/^data:image\/(gif|png);base64,(.+)$/);
+      if (!match) { res.status(400).json({ error: `Missing or invalid image for "${key}"` }); return; }
+      const [, ext, b64] = match;
+      const buf = Buffer.from(b64, 'base64');
+      if (buf.length > MAX_IMAGE_BYTES) { res.status(413).json({ error: 'Signature too large — try a smaller photo' }); return; }
+      total += buf.length;
+      buffers[key] = { buf, ext };
+    }
+    if (total > MAX_TOTAL_BYTES) { res.status(413).json({ error: 'Signature too large — try a smaller photo' }); return; }
 
-    const blob = await put(`signatures/${slug(name)}.${ext}`, buf, {
-      access: 'public',
-      contentType: `image/${ext}`,
-      addRandomSuffix: true // every generation (or two people with similar names) needs its own URL, not an overwrite collision
-    });
+    const base = slug(name);
+    const uploads = await Promise.all(SLICE_KEYS.map(async key => {
+      const { buf, ext } = buffers[key];
+      const blob = await put(`signatures/${base}/${key}.${ext}`, buf, {
+        access: 'public',
+        contentType: `image/${ext}`,
+        addRandomSuffix: true // every generation (or two people with similar names) needs its own URLs, not an overwrite collision
+      });
+      return [key, blob.url];
+    }));
 
-    res.status(200).json({ url: blob.url });
+    res.status(200).json({ urls: Object.fromEntries(uploads) });
   } catch (err) {
     res.status(500).json({ error: 'Unexpected error', detail: String((err && err.message) || err) });
   }

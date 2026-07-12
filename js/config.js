@@ -35,3 +35,16 @@ export const LAY = {
   // social icons stacked in the orange bar, centered horizontally on it (barX + barW/2)
   iconBar: { cx: 4 + 40/2, ys: [66, 100, 134], size: 20 }
 };
+
+/* Table-slice geometry for the published HTML signature (see publish.js).
+   Gmail/Outlook strip position:absolute on paste, so per-icon links can't be
+   CSS overlays — instead the rendered frame is cut into rectangles and
+   reassembled as an HTML <table>, exactly like the classic "sliced image"
+   email technique: the 3 icon strips (left column) become their own <a><img>
+   cells, the rest of the signature (right column) is one plain image.
+   Row boundaries sit at the midpoints between the 3 icon centers in
+   LAY.iconBar.ys, so each strip is centered on its icon. Must sum to CFG.H. */
+export const LINK_TABLE = {
+  colW: 44,             // left (icon) column width — matches barX + barW
+  rowH: [83, 34, 83]     // LinkedIn / website / Instagram strip heights, top to bottom
+};

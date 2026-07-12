@@ -1,39 +1,86 @@
 /* publish.js — the app's one primary action: render the intro animation to
  * a GIF in-browser (gif.js), upload it through /api/upload-signature to get
- * a public URL, then build and copy an HTML fragment that embeds that image
- * with the LinkedIn/website/Instagram icons in the orange bar wired up as
- * real, independently clickable links (a flat pasted image alone can't do
- * that — see the <a> overlay in buildHtml below).
+ * public URLs, then build and copy an HTML signature with the LinkedIn/
+ * website/Instagram icons wired up as real, independently clickable links.
+ *
+ * A single embedded image can only carry one link, and Gmail's/Outlook's
+ * signature editors strip position:absolute on paste (confirmed by testing),
+ * so a CSS overlay of <a> tags doesn't survive. Instead this cuts the
+ * rendered frame into 4 rectangles — 3 tiny strips for the icons plus one
+ * piece for the rest — and reassembles them as a plain HTML <table>, the
+ * same "sliced image" technique used for clickable regions in HTML email
+ * since before CSS positioning was safe to rely on there. Tables and plain
+ * <a><img> survive paste sanitizers; position/left/top do not.
  */
-import { CFG, LAY, SOCIAL_LINKS } from './config.js';
+import { CFG, LAY, LINK_TABLE, SOCIAL_LINKS } from './config.js';
 import { canvas, ctx } from './canvas.js';
 import { state } from './state.js';
 import { drawFrame } from './render.js';
 
 const slug = s => (s || 'signature').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'signature';
 
-/* same top-to-bottom order the icons are drawn in (see render.js drawSocialIcons) */
-const LINK_ORDER = [SOCIAL_LINKS.linkedin, SOCIAL_LINKS.website, SOCIAL_LINKS.instagram];
+/* top-to-bottom order of both the drawn icons (render.js drawSocialIcons)
+   and the table rows below */
+const ROWS = [
+  { key: 'linkedin', href: SOCIAL_LINKS.linkedin },
+  { key: 'website', href: SOCIAL_LINKS.website },
+  { key: 'instagram', href: SOCIAL_LINKS.instagram }
+];
 
-function renderGif(onProgress){
+function rowY(i){ return LINK_TABLE.rowH.slice(0, i).reduce((a, b) => a + b, 0); }
+
+/* Renders the intro animation once, splitting each frame into the 4 slice
+   canvases and feeding each to its own gif.js encoder in lockstep so all 4
+   GIFs stay frame-synced. Returns { main, linkedin, website, instagram }
+   Blobs. */
+function renderSlicedGifs(onProgress){
   return new Promise((resolve, reject) => {
     if(typeof window.GIF !== 'function'){ reject(new Error('Encoder not loaded (vendor/gif.js missing).')); return; }
-    let g, done = false, watchdog;
+
+    const colW = LINK_TABLE.colW, mainW = CFG.W - colW;
+    const slices = [
+      { key: 'linkedin', x: 0, y: rowY(0), w: colW, h: LINK_TABLE.rowH[0], workers: 1 },
+      { key: 'website', x: 0, y: rowY(1), w: colW, h: LINK_TABLE.rowH[1], workers: 1 },
+      { key: 'instagram', x: 0, y: rowY(2), w: colW, h: LINK_TABLE.rowH[2], workers: 1 },
+      { key: 'main', x: colW, y: 0, w: mainW, h: CFG.H, workers: 2 }
+    ];
+
+    let watchdog;
     try{
-      g = new window.GIF({ workers:2, quality:8, width:CFG.W, height:CFG.H, workerScript:'vendor/gif.worker.js', background:CFG.BG, repeat:CFG.LOOP_REPEATS });
-      watchdog = setTimeout(() => { if(!done) reject(new Error('Encoding timed out — the GIF worker looks blocked. Make sure you\'re on the hosted/served link, not file://.')); }, 30000);
+      const rigs = slices.map(s => {
+        const cv = document.createElement('canvas'); cv.width = s.w; cv.height = s.h;
+        const sctx = cv.getContext('2d');
+        const g = new window.GIF({ workers: s.workers, quality: 8, width: s.w, height: s.h, workerScript: 'vendor/gif.worker.js', background: CFG.BG, repeat: CFG.LOOP_REPEATS });
+        return { ...s, cv, sctx, g, done: false };
+      });
 
-      for(let f=0; f<CFG.INTRO_FRAMES; f++){
-        drawFrame(f/(CFG.INTRO_FRAMES-1), Math.floor(f/5)%2===0);
-        g.addFrame(ctx, { copy:true, delay:CFG.FRAME_DELAY });
+      watchdog = setTimeout(() => {
+        if(rigs.some(r => !r.done)) reject(new Error('Encoding timed out — the GIF worker looks blocked. Make sure you\'re on the hosted/served link, not file://.'));
+      }, 45000);
+
+      const addFrame = (p, caretOn, delay) => {
+        drawFrame(p, caretOn);
+        rigs.forEach(r => {
+          r.sctx.clearRect(0, 0, r.w, r.h);
+          r.sctx.drawImage(canvas, r.x, r.y, r.w, r.h, 0, 0, r.w, r.h);
+          r.g.addFrame(r.sctx, { copy: true, delay });
+        });
+      };
+
+      for(let f = 0; f < CFG.INTRO_FRAMES; f++){
+        addFrame(f/(CFG.INTRO_FRAMES-1), Math.floor(f/5)%2===0, CFG.FRAME_DELAY);
       }
-      drawFrame(1, false);
-      g.addFrame(ctx, { copy:true, delay:CFG.HOLD_DELAY });
+      addFrame(1, false, CFG.HOLD_DELAY);
 
-      g.on('progress', pr => onProgress && onProgress(pr));
-      g.on('finished', blob => { done = true; clearTimeout(watchdog); resolve(blob); });
-      g.on('abort', () => { done = true; clearTimeout(watchdog); reject(new Error('Encoding aborted.')); });
-      g.render();
+      let finishedCount = 0;
+      const results = {};
+      rigs.forEach(r => {
+        r.g.on('progress', pr => { r.progress = pr; onProgress && onProgress(rigs.reduce((a, x) => a + (x.progress || 0), 0) / rigs.length); });
+        r.g.on('finished', blob => { r.done = true; results[r.key] = blob; finishedCount++;
+          if(finishedCount === rigs.length){ clearTimeout(watchdog); resolve(results); } });
+        r.g.on('abort', () => { r.done = true; clearTimeout(watchdog); reject(new Error('Encoding aborted.')); });
+        r.g.render();
+      });
     } catch(e){ if(watchdog) clearTimeout(watchdog); reject(e); }
   });
 }
@@ -42,21 +89,29 @@ function blobToDataUrl(blob){
   return new Promise((resolve, reject) => {
     const r = new FileReader();
     r.onload = () => resolve(r.result);
-    r.onerror = () => reject(r.error || new Error('Failed to read the rendered GIF'));
+    r.onerror = () => reject(r.error || new Error('Failed to read a rendered GIF'));
     r.readAsDataURL(blob);
   });
 }
 
-function buildHtml(imgUrl){
-  const b = LAY.iconBar;
-  const areas = LINK_ORDER.map((href, i) => {
-    const y = b.ys[i], s = b.size, top = Math.round(y - s/2), left = Math.round(b.cx - s/2);
-    return `<a href="${href}" target="_blank" rel="noopener" style="position:absolute;left:${left}px;top:${top}px;width:${s}px;height:${s}px;display:block;"></a>`;
-  }).join('\n  ');
-  return `<div style="position:relative;width:${CFG.W}px;height:${CFG.H}px;line-height:0;font-size:0;">
-  <img src="${imgUrl}" width="${CFG.W}" height="${CFG.H}" alt="${state.name} signature" style="display:block;border:0;max-width:100%;">
-  ${areas}
-</div>`;
+/* Plain-table reassembly, zero spacing/border, MSO-safe resets — no CSS
+   position anywhere so it survives Gmail's/Outlook's paste sanitizer. */
+function buildHtml(urls){
+  const rowsHtml = ROWS.map((row, i) => {
+    const h = LINK_TABLE.rowH[i];
+    const cell = `<td width="${LINK_TABLE.colW}" height="${h}" style="width:${LINK_TABLE.colW}px;height:${h}px;padding:0;margin:0;font-size:0;line-height:0;mso-line-height-rule:exactly;">` +
+      `<a href="${row.href}" target="_blank" rel="noopener" style="text-decoration:none;">` +
+      `<img src="${urls[row.key]}" width="${LINK_TABLE.colW}" height="${h}" alt="" style="display:block;border:0;outline:none;width:${LINK_TABLE.colW}px;height:${h}px;">` +
+      `</a></td>`;
+    const mainCell = i === 0
+      ? `<td width="${CFG.W - LINK_TABLE.colW}" height="${CFG.H}" rowspan="${ROWS.length}" style="width:${CFG.W - LINK_TABLE.colW}px;height:${CFG.H}px;padding:0;margin:0;font-size:0;line-height:0;mso-line-height-rule:exactly;">` +
+        `<a href="${SOCIAL_LINKS.website}" target="_blank" rel="noopener" style="text-decoration:none;">` +
+        `<img src="${urls.main}" width="${CFG.W - LINK_TABLE.colW}" height="${CFG.H}" alt="${state.name} signature" style="display:block;border:0;outline:none;width:${CFG.W - LINK_TABLE.colW}px;height:${CFG.H}px;">` +
+        `</a></td>`
+      : '';
+    return `<tr>${cell}${mainCell}</tr>`;
+  }).join('\n');
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">\n${rowsHtml}\n</table>`;
 }
 
 /* Writes both text/html (so pasting into a rich-text signature box like
@@ -83,24 +138,26 @@ export function makePublisher({ btn, setStatus, showProgress, setBar, restart })
     }
     btn.disabled = true; showProgress(true); setStatus('Rendering frames…');
     try{
-      const blob = await renderGif(pr => { setBar(Math.round(pr*50)); setStatus('Encoding… ' + Math.round(pr*100) + '%'); });
-      const kb = (blob.size/1024).toFixed(0);
-      const warn = blob.size > 1024*1024 ? ' (over 1 MB — consider a smaller photo)' : '';
-      setBar(55); setStatus('Encoded (' + kb + ' KB' + warn + '). Uploading…');
+      const blobs = await renderSlicedGifs(pr => { setBar(Math.round(pr*50)); setStatus('Encoding… ' + Math.round(pr*100) + '%'); });
+      const totalKb = (Object.values(blobs).reduce((a, b) => a + b.size, 0)/1024).toFixed(0);
+      setBar(55); setStatus('Encoded (' + totalKb + ' KB total). Uploading…');
 
-      const imageDataUrl = await blobToDataUrl(blob);
+      const name = slug(state.name) + '-signature';
+      const dataUrls = {};
+      for(const key of Object.keys(blobs)) dataUrls[key] = await blobToDataUrl(blobs[key]);
+
       const r = await fetch('/api/upload-signature', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ imageDataUrl, name: slug(state.name) + '-signature' })
+        body: JSON.stringify({ name, slices: dataUrls })
       });
       const json = await r.json().catch(() => ({}));
       if(!r.ok) throw new Error(json.error || ('Upload failed (' + r.status + ')'));
       setBar(90);
 
-      const html = buildHtml(json.url);
+      const html = buildHtml(json.urls);
       await copyRich(html);
       setBar(100);
-      setStatus('Copied! Paste directly into your Gmail/Outlook signature editor — LinkedIn, website and Instagram in the bar are real clickable links. Hosted at <a href="' + json.url + '" target="_blank" rel="noopener">' + json.url + '</a>.');
+      setStatus('Copied! Paste directly into your Gmail/Outlook signature editor — the signature links to the website, and LinkedIn/website/Instagram in the bar are real clickable links too.');
       restart();
     }catch(e){
       setStatus('⚠ ' + (e && e.message ? e.message : e));
