@@ -1,9 +1,17 @@
-/* api/upload-signature.js — Vercel serverless function. Uploads the 4
+/* api/upload-signature.js — Vercel serverless function. Uploads the
  * client-rendered signature GIF slices (see publish.js — the frame is cut
- * into pieces so the icons can be individually hyperlinked in a plain HTML
- * table, since Gmail/Outlook strip position:absolute on paste) to Vercel
- * Blob and hands back their public URLs, so the app can publish a
- * ready-to-paste signature without the user hosting anything themselves.
+ * into pieces so the icons, and optionally the LinkedIn text line, can be
+ * individually hyperlinked in a plain HTML table, since Gmail/Outlook strip
+ * position:absolute on paste) to Vercel Blob and hands back their public
+ * URLs, so the app can publish a ready-to-paste signature without the user
+ * hosting anything themselves.
+ *
+ * The client sends either a plain "main" slice, or — when there's LinkedIn
+ * text to carve a link out of — the 5-piece "main-top/left/text/right/
+ * bottom" split from splitMainRect (see link-table.js). ALLOWED_KEYS is a
+ * whitelist (not just a shape check): every key is interpolated straight
+ * into a Blob storage path below, so an unrecognized key must be rejected
+ * before it ever reaches that path.
  *
  * Needs a Blob store connected to this Vercel project (Storage tab in the
  * dashboard); nothing else to configure. Connecting the store provisions
@@ -21,9 +29,12 @@
 const { put } = require('@vercel/blob');
 const { neon } = require('@neondatabase/serverless');
 
-const SLICE_KEYS = ['main', 'linkedin', 'website', 'instagram'];
+const ICON_KEYS = ['linkedin', 'website', 'instagram'];
+const MAIN_KEYS = ['main'];
+const MAIN_SPLIT_KEYS = ['main-top', 'main-left', 'main-text', 'main-right', 'main-bottom'];
+const ALLOWED_KEYS = new Set([...ICON_KEYS, ...MAIN_KEYS, ...MAIN_SPLIT_KEYS]);
 const MAX_IMAGE_BYTES = 3 * 1024 * 1024;      // raw bytes per slice
-const MAX_TOTAL_BYTES = 4 * 1024 * 1024;      // raw bytes across all 4 — stays under Vercel's request-body ceiling once base64-encoded
+const MAX_TOTAL_BYTES = 6 * 1024 * 1024;      // raw bytes across all slices — stays under Vercel's request-body ceiling once base64-encoded
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 10;
 
@@ -53,13 +64,33 @@ module.exports = async function handler(req, res) {
     let body;
     try { body = req.body; } catch (e) { body = null; } // platform body parsing throws on malformed JSON
     const { slices, name } = body || {};
-    if (!slices || typeof slices !== 'object' || SLICE_KEYS.some(k => !slices[k])) {
+    if (!slices || typeof slices !== 'object') {
       res.status(400).json({ error: 'Missing or invalid image slices' }); return;
     }
 
+    const keys = Object.keys(slices);
+    const keySet = new Set(keys);
+    if (!keys.length || keys.some(k => !ALLOWED_KEYS.has(k))) {
+      res.status(400).json({ error: 'Missing or invalid image slices' }); return;
+    }
+    if (ICON_KEYS.some(k => !keySet.has(k))) {
+      res.status(400).json({ error: 'Missing icon image slice(s)' }); return;
+    }
+    // "main" (no LinkedIn text to link) and the 5-piece split (see
+    // splitMainRect) are the only two valid shapes for the rest of the
+    // signature — never a partial mix, and never a stray extra key from
+    // the other shape tagging along.
+    const hasPlainMain = MAIN_KEYS.every(k => keySet.has(k));
+    const hasSplitMain = MAIN_SPLIT_KEYS.every(k => keySet.has(k));
+    const expectedCount = ICON_KEYS.length + (hasPlainMain ? MAIN_KEYS.length : hasSplitMain ? MAIN_SPLIT_KEYS.length : -1);
+    if (hasPlainMain === hasSplitMain || keys.length !== expectedCount) {
+      res.status(400).json({ error: 'Missing or invalid image slices' }); return;
+    }
+    const sliceKeys = [...ICON_KEYS, ...(hasPlainMain ? MAIN_KEYS : MAIN_SPLIT_KEYS)];
+
     const buffers = {};
     let total = 0;
-    for (const key of SLICE_KEYS) {
+    for (const key of sliceKeys) {
       const match = typeof slices[key] === 'string' && slices[key].match(/^data:image\/(gif|png);base64,(.+)$/);
       if (!match) { res.status(400).json({ error: `Missing or invalid image for "${key}"` }); return; }
       const [, ext, b64] = match;
@@ -71,7 +102,7 @@ module.exports = async function handler(req, res) {
     if (total > MAX_TOTAL_BYTES) { res.status(413).json({ error: 'Signature too large — try a smaller photo' }); return; }
 
     const base = slug(name);
-    const uploads = await Promise.all(SLICE_KEYS.map(async key => {
+    const uploads = await Promise.all(sliceKeys.map(async key => {
       const { buf, ext } = buffers[key];
       const blob = await put(`signatures/${base}/${key}.${ext}`, buf, {
         access: 'public',

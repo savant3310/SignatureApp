@@ -42,8 +42,9 @@ export function iconCenters(linkTable){
   });
 }
 
-/* Rectangles for the 4 upload slices: 3 icon cells (in cellSizes order)
-   plus 1 "main" rect covering everything else. */
+/* Rectangles for the base upload slices: 3 icon cells (in cellSizes order)
+   plus 1 "main" rect covering everything else (further split by
+   splitMainRect below when the template has inline text to link). */
 export function sliceRects(linkTable){
   const { orientation, stripSize, cellSizes, stripAt } = linkTable;
   const offsets = []; let acc = 0;
@@ -59,4 +60,29 @@ export function sliceRects(linkTable){
     : { x: 0, y: stripAt === 'start' ? stripSize : 0, w: CFG.W, h: CFG.H - stripSize };
 
   return { icon: iconRects, main: mainRect };
+}
+
+/* Splits a "main" rect into the 5 rectangles needed to carve out one
+   floating inner rect (e.g. a piece of user-entered text) as its own
+   clickable slice, while everything around it keeps the main rect's link:
+     ┌──────────── top ────────────┐
+     │ left │     text     │ right │
+     └─────────── bottom ──────────┘
+   Every piece is clamped to at least 1px so none becomes an invalid
+   zero-size canvas even for degenerate input. Returns null if there's no
+   inner rect to carve out. */
+export function splitMainRect(mainRect, textRect){
+  if(!textRect) return null;
+  const relX = textRect.x - mainRect.x, relY = textRect.y - mainRect.y;
+  const topH = Math.max(1, relY);
+  const bottomH = Math.max(1, mainRect.h - (relY + textRect.h));
+  const leftW = Math.max(1, relX);
+  const rightW = Math.max(1, mainRect.w - (relX + textRect.w));
+  return {
+    top:    { x: mainRect.x, y: mainRect.y, w: mainRect.w, h: topH },
+    left:   { x: mainRect.x, y: mainRect.y + topH, w: leftW, h: textRect.h },
+    text:   { x: textRect.x, y: textRect.y, w: textRect.w, h: textRect.h },
+    right:  { x: textRect.x + textRect.w, y: mainRect.y + topH, w: rightW, h: textRect.h },
+    bottom: { x: mainRect.x, y: mainRect.y + topH + textRect.h, w: mainRect.w, h: bottomH }
+  };
 }

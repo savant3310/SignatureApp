@@ -12,7 +12,7 @@ const LAY = {
   barX: 4, barY: 4, barW: 40, barH: CFG.H - 8,        // orange bar (left, flush to card edge)
   contentX: 78,                                       // where text starts
   logoBox: { x: 78, y: 16, w: 150, h: 38 },           // logo box (top-left)
-  nameY: 82, titleY: 104, companyY: 124, linkedinY: 144, websiteY: 160, phoneY: 176,
+  nameY: 82, titleY: 104, companyY: 124, linkedinY: 148, phoneY: 172,
   px: 410, py: 24, pw: 640 - 16 - 410, ph: 200 - 48,  // sliced photo region (right)
   slices: 5, skew: 26                                 // diagonal cut
 };
@@ -93,9 +93,22 @@ function drawFrame(p, caretOn){
 
   fadeSlide(state.title,   L.contentX, L.titleY,   '600 14px -apple-system,Helvetica,Arial', accent,       seg(p, 0.50, 0.66));
   fadeSlide(state.company, L.contentX, L.companyY, '700 13px -apple-system,Helvetica,Arial', BRAND.orange, seg(p, 0.58, 0.74));
-  const lines = []; if(state.linkedin) lines.push(state.linkedin); if(state.website) lines.push(state.website); if(state.phone) lines.push(state.phone);
-  const ys = [L.linkedinY, L.websiteY, L.phoneY];
-  lines.slice(0,3).forEach((tx, i) => fadeSlide(tx, L.contentX, ys[i], '400 12.5px -apple-system,Helvetica,Arial', BRAND.black, seg(p, 0.66 + i*0.06, 0.82 + i*0.06)));
+  const lines = []; if(state.linkedin) lines.push(state.linkedin); if(state.phone) lines.push(state.phone);
+  const ys = [L.linkedinY, L.phoneY];
+  lines.slice(0,2).forEach((tx, i) => fadeSlide(tx, L.contentX, ys[i], '400 12.5px -apple-system,Helvetica,Arial', BRAND.black, seg(p, 0.66 + i*0.06, 0.82 + i*0.06)));
+}
+
+/* Bounding box of the rendered LinkedIn line (always the first contact line
+   when present — see the `lines` array above), used by publish.js to carve
+   that text out of the "main" clickable region as its own link to the
+   user's profile instead of the company website. Null when there's no
+   LinkedIn text to link. */
+function linkedinTextRect(){
+  if(!state.linkedin) return null;
+  ctx.save(); ctx.font = '400 12.5px -apple-system,Helvetica,Arial';
+  const w = ctx.measureText(state.linkedin).width;
+  ctx.restore();
+  return { x: LAY.contentX - 2, y: LAY.linkedinY - 11, w: Math.ceil(w) + 4, h: 16 };
 }
 
 export default {
@@ -103,5 +116,6 @@ export default {
   name: 'Classic Bar',
   linkTable: LINK_TABLE,
   photoBox: { w: LAY.pw, h: LAY.ph },
+  linkedinRect: linkedinTextRect,
   drawFrame
 };

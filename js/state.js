@@ -8,7 +8,6 @@ export const state = {
   title: 'Head of Partnerships',
   company: 'Opraah',
   linkedin: 'linkedin.com/in/jessicabrooks',
-  website: 'www.opraah.in',
   phone: '',
   accent: ACCENTS[0],
   photoImg: null,

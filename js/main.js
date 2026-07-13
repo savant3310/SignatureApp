@@ -11,7 +11,7 @@ import { generateAvatar } from './avatar.js';
 const $ = id => document.getElementById(id);
 const els = {
   name:$('f-name'), title:$('f-title'), company:$('f-company'), linkedin:$('f-linkedin'),
-  website:$('f-website'), phone:$('f-phone'), photo:$('f-photo'),
+  phone:$('f-phone'), photo:$('f-photo'),
   photoLabel:$('photo-label'), templateSeg:$('templateSeg'),
   status:$('status'), progress:$('progress'), progressBar:document.querySelector('#progress i'),
   swatches:$('swatches'), badgeSeg:$('badgeSeg'),
@@ -22,7 +22,7 @@ const els = {
 
 /* ---- reflect initial state into the default-valued inputs ---- */
 els.name.value = state.name; els.title.value = state.title; els.company.value = state.company;
-els.linkedin.value = state.linkedin; els.website.value = state.website; els.phone.value = state.phone;
+els.linkedin.value = state.linkedin; els.phone.value = state.phone;
 
 /* ---- status / progress helpers ---- */
 function setStatus(h){ els.status.innerHTML = h; }
@@ -91,7 +91,7 @@ const photoAdj = makeAdjuster({ canvas: els.photoCrop, slider: els.photoZoom, re
 /* ---- text inputs ---- */
 function bind(el, key, after){ el.addEventListener('input', () => { state[key] = el.value; if(after) after(); restart(); }); }
 bind(els.name,'name'); bind(els.title,'title'); bind(els.company,'company', saveCfg);
-bind(els.linkedin,'linkedin'); bind(els.website,'website'); bind(els.phone,'phone');
+bind(els.linkedin,'linkedin'); bind(els.phone,'phone');
 els.replay.onclick = restart;
 
 /* ---- photo upload ---- */
