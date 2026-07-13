@@ -116,7 +116,7 @@ els.genAvatar.addEventListener('click', async () => {
   if(!state.photoImg) return;
   els.genAvatar.disabled = true; setAvatarStatus('Generating… this can take up to 30s.');
   try{
-    const dataUrl = await generateAvatar(state.photoImg, els.passcode.value);
+    const dataUrl = await generateAvatar(state.photoImg, els.passcode.value, state.name);
     const img = new Image();
     img.onload = () => { state.avatarImg = img; showImage(img);
       els.genAvatar.style.display = 'none';

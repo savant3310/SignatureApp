@@ -1,8 +1,10 @@
 /* avatar.js — talks to the /api/generate-avatar serverless proxy. The OpenAI
    key never touches the browser; this only ever sends the shared team
-   passcode plus the employee's own already-uploaded photo. Requires the page
-   to be served through Vercel (or `vercel dev`) — the endpoint doesn't exist
-   under the plain python start scripts. */
+   passcode, the employee's own already-uploaded photo, and their typed name
+   (used server-side to enforce the per-person generation cap — see
+   api/generate-avatar.js). Requires the page to be served through Vercel (or
+   `vercel dev`) — the endpoint doesn't exist under the plain python start
+   scripts. */
 
 function downscaledDataUrl(img, maxDim){
   const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
@@ -12,12 +14,12 @@ function downscaledDataUrl(img, maxDim){
   return c.toDataURL('image/png');
 }
 
-export async function generateAvatar(photoImg, passcode){
+export async function generateAvatar(photoImg, passcode, name){
   const imageDataUrl = downscaledDataUrl(photoImg, 1024);
   const res = await fetch('/api/generate-avatar', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-passcode': passcode || '' },
-    body: JSON.stringify({ imageDataUrl })
+    body: JSON.stringify({ imageDataUrl, name })
   });
   const json = await res.json().catch(() => ({}));
   if(!res.ok) throw new Error(json.error || ('Request failed (' + res.status + ')'));
