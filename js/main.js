@@ -17,7 +17,8 @@ const els = {
   swatches:$('swatches'), badgeSeg:$('badgeSeg'),
   replay:$('replay'), publish:$('publish-btn'),
   photoEditor:$('photoEditor'), photoCrop:$('photoCrop'), photoZoom:$('photoZoom'), photoReset:$('photoReset'),
-  passcode:$('f-passcode'), passcodeToggle:$('passcodeToggle'), avatarBlock:$('avatarBlock'), genAvatar:$('genAvatar'), avatarToggle:$('avatarToggle'), avatarStatus:$('avatarStatus')
+  passcode:$('f-passcode'), passcodeToggle:$('passcodeToggle'), avatarBlock:$('avatarBlock'), genAvatar:$('genAvatar'), avatarToggle:$('avatarToggle'), avatarStatus:$('avatarStatus'),
+  avatarProgress:$('avatarProgress'), avatarProgressBar:document.querySelector('#avatarProgress i')
 };
 
 /* ---- reflect initial state into the default-valued inputs ---- */
@@ -29,6 +30,27 @@ function setStatus(h){ els.status.innerHTML = h; }
 function showProgress(on){ els.progress.classList.toggle('on', on); els.progressBar.style.width = '0%'; }
 function setBar(pct){ els.progressBar.style.width = pct + '%'; }
 function setAvatarStatus(h){ els.avatarStatus.innerHTML = h; }
+
+/* The generator is a single request with no real byte-progress to read, so
+   the bar fills on elapsed time instead: it eases toward 90% over roughly
+   the "up to 30s" window quoted in the status text (never quite reaching
+   it, so a slow response never looks stalled at 100%), then on success
+   jumps to 100% for a beat before hiding. */
+let avatarProgressTimer = null;
+function startAvatarProgress(){
+  clearInterval(avatarProgressTimer);
+  els.avatarProgress.classList.add('on'); els.avatarProgressBar.style.width = '0%';
+  const start = performance.now(), estMs = 22000;
+  avatarProgressTimer = setInterval(() => {
+    const pct = 90 * (1 - Math.exp(-(performance.now() - start) / estMs));
+    els.avatarProgressBar.style.width = pct.toFixed(1) + '%';
+  }, 120);
+}
+function stopAvatarProgress(finished){
+  clearInterval(avatarProgressTimer); avatarProgressTimer = null;
+  if(finished){ els.avatarProgressBar.style.width = '100%'; setTimeout(() => els.avatarProgress.classList.remove('on'), 400); }
+  else els.avatarProgress.classList.remove('on');
+}
 
 /* ---- avatar passcode (kept separate from sig.cfg — it's a shared access
    gate for the paid generator API, not a rendering/branding setting) ---- */
@@ -104,7 +126,7 @@ els.photo.addEventListener('change', e => { const f = e.target.files[0]; if(!f) 
   img.onload = () => { state.photoOriginalImg = img; state.avatarImg = null; showImage(img);
     els.photoEditor.style.display = 'block';
     els.avatarBlock.style.display = 'block'; els.genAvatar.style.display = 'inline-block'; els.genAvatar.disabled = false;
-    els.avatarToggle.style.display = 'none'; setAvatarStatus(''); };
+    els.avatarToggle.style.display = 'none'; setAvatarStatus(''); stopAvatarProgress(false); };
   img.src = URL.createObjectURL(f); els.photoLabel.textContent = f.name; });
 
 /* ---- animated avatar generation (calls the /api/generate-avatar proxy —
@@ -114,16 +136,16 @@ els.photo.addEventListener('change', e => { const f = e.target.files[0]; if(!f) 
    again, so it never costs more credits. ---- */
 els.genAvatar.addEventListener('click', async () => {
   if(!state.photoImg) return;
-  els.genAvatar.disabled = true; setAvatarStatus('Generating… this can take up to 30s.');
+  els.genAvatar.disabled = true; setAvatarStatus('Generating… this can take up to 30s.'); startAvatarProgress();
   try{
     const dataUrl = await generateAvatar(state.photoImg, els.passcode.value, state.name);
     const img = new Image();
     img.onload = () => { state.avatarImg = img; showImage(img);
       els.genAvatar.style.display = 'none';
       els.avatarToggle.textContent = 'Use original photo'; els.avatarToggle.style.display = 'inline-block';
-      setAvatarStatus('Animated avatar applied.'); };
+      setAvatarStatus('Animated avatar applied.'); stopAvatarProgress(true); };
     img.src = dataUrl;
-  }catch(err){ setAvatarStatus('⚠ ' + (err && err.message ? err.message : err)); els.genAvatar.disabled = false; }
+  }catch(err){ setAvatarStatus('⚠ ' + (err && err.message ? err.message : err)); els.genAvatar.disabled = false; stopAvatarProgress(false); }
 });
 els.avatarToggle.addEventListener('click', () => {
   const showingAvatar = state.photoImg === state.avatarImg;
