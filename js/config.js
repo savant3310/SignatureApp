@@ -22,8 +22,11 @@ export const BRAND = {
 
 /* Accent swatches offered in the UI. Cream is excluded here — as foreground
    text/caret color against the white card it has no contrast — but it's
-   still available via BRAND.cream for background/decorative use. */
-export const ACCENTS = [BRAND.orange, BRAND.blue, BRAND.black, BRAND.lavender];
+   still available via BRAND.cream for background/decorative use. Black and
+   lavender were dropped from the picker too (still used decoratively
+   elsewhere, e.g. orbit.js's dot cluster — just not offered as a
+   user-selectable accent). */
+export const ACCENTS = [BRAND.orange, BRAND.blue];
 
 export const COMPANY_NAME = 'OPRAAH';
 
