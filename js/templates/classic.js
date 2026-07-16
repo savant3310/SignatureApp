@@ -1,6 +1,6 @@
-/* templates/classic.js — the original design: a full-height orange bar on
-   the left (holding the 3 social icons), name/title/company/contact text,
-   and a diagonally-sliced photo reveal on the right. */
+/* templates/classic.js — the original design: 3 social icons stacked along
+   the left edge, name/title/contact text, and a diagonally-sliced photo
+   reveal on the right. */
 import { ctx } from '../canvas.js';
 import { state } from '../state.js';
 import { CFG, BRAND, COMPANY_NAME } from '../config.js';
@@ -9,16 +9,15 @@ import { drawType, fadeSlide, drawBadge, drawSocialIcons } from '../draw-utils.j
 
 const LAY = {
   cardR: 12,
-  barX: 4, barY: 4, barW: 40, barH: CFG.H - 8,        // orange bar (left, flush to card edge)
   contentX: 78,                                       // where text starts
-  logoBox: { x: 78, y: 16, w: 150, h: 38 },           // logo box (top-left)
-  nameY: 82, titleY: 104, companyY: 124, linkedinY: 148, phoneY: 172,
+  logoBox: { x: 78, y: 24, w: 160, h: 48 },           // logo box (top-left)
+  nameY: 102, titleY: 128, linkedinY: 168, phoneY: 192,
   px: 410, py: 24, pw: 640 - 16 - 410, ph: 200 - 48,  // sliced photo region (right)
   slices: 5, skew: 26                                 // diagonal cut
 };
 
-/* icons stacked in the orange bar, centered horizontally on it (barX + barW/2) */
-const LINK_TABLE = { orientation: 'column', stripAt: 'start', stripSize: 44, cellSizes: [83, 34, 83] };
+/* icons stacked along the left edge, in a 44px-wide strip, nudged 4px right of center */
+const LINK_TABLE = { orientation: 'column', stripAt: 'start', stripSize: 44, cellSizes: [83, 34, 83], iconOffset: 26 };
 
 function drawPhoto(p){
   const L = LAY, N = L.slices, SK = L.skew;
@@ -59,11 +58,6 @@ function drawPhoto(p){
   ctx.restore();
 }
 
-function drawBar(p){
-  const L = LAY; const pb = easeOut(seg(p, 0.06, 0.3)); if(pb <= 0) return;
-  ctx.save(); ctx.globalAlpha = pb; roundRectPath(ctx, L.barX, L.barY, L.barW, L.barH, 12); ctx.fillStyle = BRAND.orange; ctx.fill(); ctx.restore();
-}
-
 const LOGO_FIT = { zoom: 1, ox: 0, oy: 0 };
 function drawLogo(p){
   const pe = easeOut(seg(p, 0, 0.24)); if(pe <= 0) return; const box = LAY.logoBox, accent = state.accent;
@@ -83,16 +77,15 @@ function drawFrame(p, caretOn){
   const { W, H } = CFG, L = LAY, accent = state.accent;
   ctx.save(); roundRectPath(ctx, 4, 4, W-8, H-8, L.cardR); ctx.strokeStyle = '#e6e9f2'; ctx.lineWidth = 1.5; ctx.stroke(); ctx.restore();
 
-  drawBar(p); drawSocialIcons(p, LINK_TABLE); drawPhoto(p); drawLogo(p);
+  drawSocialIcons(p, LINK_TABLE); drawPhoto(p); drawLogo(p);
 
   const pName = seg(p, 0.28, 0.56);
-  ctx.font = '700 22px -apple-system,Helvetica,Arial';
+  ctx.font = '700 28px -apple-system,Helvetica,Arial';
   const nameW = ctx.measureText(state.name.slice(0, Math.round(clamp01(pName)*state.name.length))).width;
-  drawType(state.name, L.contentX, L.nameY, '700 22px -apple-system,Helvetica,Arial', BRAND.orange, pName, caretOn, accent);
+  drawType(state.name, L.contentX, L.nameY, '700 28px -apple-system,Helvetica,Arial', BRAND.orange, pName, caretOn, accent);
   if(state.badge){ const bp = seg(p, 0.56, 0.66); drawBadge(L.contentX+nameW+13, L.nameY-7, bp, accent); }
 
-  fadeSlide(state.title,   L.contentX, L.titleY,   '600 14px -apple-system,Helvetica,Arial', accent,       seg(p, 0.50, 0.66));
-  fadeSlide(state.company, L.contentX, L.companyY, '700 13px -apple-system,Helvetica,Arial', BRAND.orange, seg(p, 0.58, 0.74));
+  fadeSlide(state.title,   L.contentX, L.titleY,   '600 18px -apple-system,Helvetica,Arial', accent,       seg(p, 0.50, 0.66));
   const lines = []; if(state.linkedin) lines.push(state.linkedin); if(state.phone) lines.push(state.phone);
   const ys = [L.linkedinY, L.phoneY];
   lines.slice(0,2).forEach((tx, i) => fadeSlide(tx, L.contentX, ys[i], '400 12.5px -apple-system,Helvetica,Arial', BRAND.black, seg(p, 0.66 + i*0.06, 0.82 + i*0.06)));

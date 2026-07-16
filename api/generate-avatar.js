@@ -43,7 +43,12 @@ const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 5;
 const GENERATION_CAP = 2; // lifetime generations allowed per person (see avatar_generations table)
 const CAP_MESSAGE = 'Sorry, no more generations available — please contact your administrator.';
-const PROMPT = `Transform this portrait into a beautiful Studio Ghibli-inspired illustration while preserving the person's exact facial features, hairstyle, expression, skin tone, and pose. Create a soft, hand-painted anime aesthetic with delicate watercolor textures, warm pastel colors, expressive eyes, subtle blush, and gentle lighting. Keep the loose black top and natural hairstyle unchanged. Use a clean, warm beige background with a dreamy atmosphere. The artwork should feel like a frame from a Studio Ghibli film—peaceful, elegant, nostalgic, and full of warmth. Soft painterly shading, delicate linework, cinematic composition, natural proportions, high detail, premium quality, magical realism, subtle depth of field, 8K illustration.`;
+const PROMPT = `Transform the uploaded profile picture into a bold 1970s psychedelic poster illustration in the following style:
+Subject treatment: Keep the person's face as the central focus, cut out cleanly from its background. Preserve their actual facial features, skin tone, and likeness, but render the image with slightly boosted contrast and warm, editorial color grading. If they're wearing glasses, a hat, or other accessories, keep them. Add a stylized beret or keep existing headwear rendered in a rich, textured single color (teal, mustard, or burnt orange).
+Typography: Surround the face with large, hand-drawn groovy retro lettering that wraps around the head in a circular/enclosing composition. The letters must be thick, rounded, liquid-like bubble forms with organic swooshes and blobs filling negative space — classic late-60s/70s psychedelic funk style. Use placeholder text "[YOUR TEXT HERE]" split across top and bottom (e.g., two words top, two words bottom) so the words frame the face.
+Color palette: Warm cream or off-white background. Bright vermillion/orange-red for all typography and decorative blob accents. Keep it to a tight 2–3 color palette for a screen-printed, retro poster feel.
+Composition: Portrait orientation. Face centered. Lettering and abstract teardrop/blob shapes fill all surrounding space edge-to-edge with no empty gaps. Flat vector-style shapes, no gradients on the text, slight print texture overall.
+Mood: Vintage art-show flyer, funky, expressive, gallery-poster energy. 1:1 aspect ratio.`;
 
 const hitsByIp = new Map();
 

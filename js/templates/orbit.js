@@ -1,8 +1,8 @@
-/* templates/orbit.js — same bar/logo/text layout and circular halo-photo
-   as Spotlight Circle (see spotlight.js), but the loop-bracket decoration
-   is replaced with a cluster of brand-colored dots that swing in along a
-   short arc around the headshot while popping up to full size — no
-   border strokes, matching the rest of the app's floating-card look. */
+/* templates/orbit.js — same logo/text layout as Classic Bar, but a
+   circular halo-photo on the right: a big accent circle concentric with the
+   headshot (a halo ring) plus a cluster of brand-colored dots that swing in
+   along a short arc around it while popping up to full size — no border
+   strokes, matching the rest of the app's floating-card look. */
 import { ctx } from '../canvas.js';
 import { state } from '../state.js';
 import { CFG, BRAND } from '../config.js';
@@ -12,23 +12,22 @@ import { COMPANY_NAME } from '../config.js';
 
 const LAY = {
   cardR: 16,
-  barX: 4, barY: 4, barW: 40, barH: CFG.H - 8,        // orange bar (left, flush to card edge) — same as Classic/Spotlight
   contentX: 78,                                       // where text starts
-  logoBox: { x: 78, y: 16, w: 150, h: 38 },           // logo box (top-left)
-  nameY: 82, titleY: 104, companyY: 124, linkedinY: 148, phoneY: 172,
-  photoCx: 522, photoCy: 100, photoR: 70,             // circular headshot (right) — same spot as Spotlight
+  logoBox: { x: 78, y: 24, w: 160, h: 48 },           // logo box (top-left)
+  nameY: 102, titleY: 128, linkedinY: 168, phoneY: 192,
+  photoCx: 522, photoCy: 100, photoR: 70,             // circular headshot (right)
   circleR: 92                                         // big accent circle, concentric with the photo
 };
 
-/* icons stacked in the orange bar, centered horizontally on it — identical
-   geometry to Classic/Spotlight so the same sliced-table link technique applies */
-const LINK_TABLE = { orientation: 'column', stripAt: 'start', stripSize: 44, cellSizes: [83, 34, 83] };
+/* icons stacked along the left edge, in a 44px-wide strip, nudged 4px right of
+   center — identical geometry to Classic so the same sliced-table link technique applies */
+const LINK_TABLE = { orientation: 'column', stripAt: 'start', stripSize: 44, cellSizes: [83, 34, 83], iconOffset: 26 };
 
 /* One orbiting dot: travels a short arc (angleFrom -> angleTo, degrees,
    standard canvas angles) around (cx,cy) at a fixed orbitR, while popping
    up from nothing to dotR. Motion uses a plain ease (settles smoothly on
-   the arc); size uses easeOutBack for the same springy pop as drawBadge
-   and Spotlight's loop strokes, so all three templates feel consistent. */
+   the arc); size uses easeOutBack for the same springy pop as drawBadge,
+   so both effects feel consistent. */
 function drawDot(cx, cy, orbitR, angleFrom, angleTo, dotR, color, prog){
   if(prog <= 0) return;
   const t = clamp01(prog);
@@ -53,11 +52,11 @@ function drawDot(cx, cy, orbitR, angleFrom, angleTo, dotR, color, prog){
 const DOT_GAP = 10;
 const DOTS = [
   { to: 55,   r: 16, color: BRAND.cream,    win: [0.00, 0.28] }, // large & subtle, bottom-right — drawn first so bolder dots layer over it
-  { to: -20,  r: 14, color: BRAND.orange,   win: [0.02, 0.30] }, // large, upper-right
-  { to: -58,  r: 10, color: BRAND.orange,   win: [0.05, 0.32] }, // medium, top
-  { to: 15,   r: 8,  color: BRAND.orange,   win: [0.08, 0.34] }, // small-medium, right
-  { to: -125, r: 6,  color: BRAND.orange,   win: [0.11, 0.36] }, // small, upper-left of halo
-  { to: 140,  r: 6,  color: BRAND.blue,     win: [0.14, 0.38] }, // small, lower-left
+  { to: -20,  r: 14, color: BRAND.blue,   win: [0.02, 0.30] }, // large, upper-right
+  { to: -58,  r: 10, color: BRAND.blue,   win: [0.05, 0.32] }, // medium, top
+  { to: 15,   r: 8,  color: BRAND.blue,   win: [0.08, 0.34] }, // small-medium, right
+  { to: -125, r: 6,  color: BRAND.blue,   win: [0.11, 0.36] }, // small, upper-left of halo
+  { to: 140,  r: 6,  color: BRAND.orange,     win: [0.14, 0.38] }, // small, lower-left
   { to: -145, r: 5,  color: BRAND.black,    win: [0.17, 0.40] }, // small, left
   { to: 65,   r: 5,  color: BRAND.lavender, win: [0.20, 0.42] }  // small, bottom
 ];
@@ -81,7 +80,7 @@ function drawHalo(p){
   if(cp > 0){
     ctx.save(); ctx.translate(L.photoCx, L.photoCy); ctx.scale(cp, cp);
     ctx.globalAlpha = clamp01(seg(p, 0.14, 0.38) * 3);
-    ctx.beginPath(); ctx.arc(0, 0, L.circleR, 0, Math.PI * 2); ctx.fillStyle = BRAND.blue; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, L.circleR, 0, Math.PI * 2); ctx.fillStyle = BRAND.orange; ctx.fill();
     ctx.restore();
   }
   ctx.restore();
@@ -109,11 +108,6 @@ function drawPhoto(p){
   ctx.restore();
 }
 
-function drawBar(p){
-  const L = LAY; const pb = easeOut(seg(p, 0.06, 0.3)); if(pb <= 0) return;
-  ctx.save(); ctx.globalAlpha = pb; roundRectPath(ctx, L.barX, L.barY, L.barW, L.barH, 12); ctx.fillStyle = BRAND.orange; ctx.fill(); ctx.restore();
-}
-
 const LOGO_FIT = { zoom: 1, ox: 0, oy: 0 };
 function drawLogo(p){
   const pe = easeOut(seg(p, 0, 0.24)); if(pe <= 0) return; const box = LAY.logoBox, accent = state.accent;
@@ -132,10 +126,10 @@ function drawLogo(p){
 function drawFrame(p, caretOn){
   const L = LAY, accent = state.accent;
 
-  drawBar(p); drawSocialIcons(p, LINK_TABLE); drawDots(p); drawHalo(p); drawPhoto(p); drawLogo(p);
+  drawSocialIcons(p, LINK_TABLE); drawDots(p); drawHalo(p); drawPhoto(p); drawLogo(p);
 
   const pName = seg(p, 0.28, 0.56);
-  const NAME_FONT = '700 22px -apple-system,Helvetica,Arial';
+  const NAME_FONT = '700 28px -apple-system,Helvetica,Arial';
   ctx.save(); ctx.font = NAME_FONT; // measureText uses whatever font is already set — must match drawType's below
   const nameW = ctx.measureText(state.name.slice(0, Math.round(clamp01(pName)*state.name.length))).width;
   ctx.restore();
@@ -143,7 +137,6 @@ function drawFrame(p, caretOn){
   if(state.badge){ const bp = seg(p, 0.56, 0.66); drawBadge(L.contentX+nameW+19, L.nameY-7, bp, accent); }
 
   fadeSlide(state.title,   L.contentX, L.titleY,   '600 14px -apple-system,Helvetica,Arial', accent,       seg(p, 0.50, 0.66));
-  fadeSlide(state.company, L.contentX, L.companyY, '700 13px -apple-system,Helvetica,Arial', BRAND.orange, seg(p, 0.58, 0.74));
   const lines = []; if(state.linkedin) lines.push(state.linkedin); if(state.phone) lines.push(state.phone);
   const ys = [L.linkedinY, L.phoneY];
   lines.slice(0,2).forEach((tx, i) => fadeSlide(tx, L.contentX, ys[i], '400 12.5px -apple-system,Helvetica,Arial', BRAND.black, seg(p, 0.66 + i*0.06, 0.82 + i*0.06)));

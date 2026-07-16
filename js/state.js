@@ -6,7 +6,6 @@ export const state = {
   template: DEFAULT_TEMPLATE_ID,
   name: 'Jessica Brooks',
   title: 'Head of Partnerships',
-  company: 'Opraah',
   linkedin: 'linkedin.com/in/jessicabrooks',
   phone: '',
   accent: ACCENTS[0],

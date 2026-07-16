@@ -10,7 +10,7 @@ import { generateAvatar } from './avatar.js';
 
 const $ = id => document.getElementById(id);
 const els = {
-  name:$('f-name'), title:$('f-title'), company:$('f-company'), linkedin:$('f-linkedin'),
+  name:$('f-name'), title:$('f-title'), linkedin:$('f-linkedin'),
   phone:$('f-phone'), photo:$('f-photo'),
   photoLabel:$('photo-label'), templateSeg:$('templateSeg'),
   status:$('status'), progress:$('progress'), progressBar:document.querySelector('#progress i'),
@@ -22,7 +22,7 @@ const els = {
 };
 
 /* ---- reflect initial state into the default-valued inputs ---- */
-els.name.value = state.name; els.title.value = state.title; els.company.value = state.company;
+els.name.value = state.name; els.title.value = state.title;
 els.linkedin.value = state.linkedin; els.phone.value = state.phone;
 
 /* ---- status / progress helpers ---- */
@@ -75,12 +75,11 @@ function tick(now){
 }
 function restart(){ animStart = performance.now(); }
 
-/* ---- persistence (company + style, saved in this browser) ---- */
+/* ---- persistence (style, saved in this browser) ---- */
 function saveCfg(){ try{ localStorage.setItem('sig.cfg', JSON.stringify({
-  company: state.company, accent: state.accent, badge: state.badge, template: state.template })); }catch(e){} }
+  accent: state.accent, badge: state.badge, template: state.template })); }catch(e){} }
 function loadCfg(){ try{
   const d = JSON.parse(localStorage.getItem('sig.cfg') || 'null'); if(!d) return;
-  if(d.company){ state.company = d.company; els.company.value = d.company; }
   if(d.accent) state.accent = d.accent;
   if(typeof d.badge === 'boolean') state.badge = d.badge;
   if(d.template && TEMPLATE_LIST.some(t => t.id === d.template)){
@@ -112,7 +111,7 @@ const photoAdj = makeAdjuster({ canvas: els.photoCrop, slider: els.photoZoom, re
 
 /* ---- text inputs ---- */
 function bind(el, key, after){ el.addEventListener('input', () => { state[key] = el.value; if(after) after(); restart(); }); }
-bind(els.name,'name'); bind(els.title,'title'); bind(els.company,'company', saveCfg);
+bind(els.name,'name'); bind(els.title,'title');
 bind(els.linkedin,'linkedin'); bind(els.phone,'phone');
 els.replay.onclick = restart;
 
